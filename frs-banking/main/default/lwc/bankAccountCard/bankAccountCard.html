@@ -1,0 +1,24 @@
+<template>
+    <lightning-card title="Account Balance" icon-name="standard:currency">
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+            <template lwc:if={loading}>
+                <lightning-spinner alternative-text="Loading balance" size="small"></lightning-spinner>
+            </template>
+
+            <template lwc:if={error}>
+                <p class="slds-text-color_weak" role="status">{error}</p>
+            </template>
+
+            <template lwc:if={balance}>
+                <p class="slds-text-heading_large">{balance}</p>
+                <p class="slds-text-body_small slds-text-color_weak">as of {asOf}</p>
+            </template>
+
+            <lightning-button
+                label="Refresh"
+                onclick={loadBalance}
+                class="slds-m-top_small"
+            ></lightning-button>
+        </div>
+    </lightning-card>
+</template>

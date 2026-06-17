@@ -1,0 +1,13 @@
+{
+  "name": "frs-banking",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Salesforce banking-servicing app (frs-banking on frs-platform-core).",
+  "scripts": {
+    "test:unit": "sfdx-lwc-jest --skipApiVersionCheck",
+    "test:unit:coverage": "sfdx-lwc-jest --coverage --skipApiVersionCheck"
+  },
+  "devDependencies": {
+    "@salesforce/sfdx-lwc-jest": "^7.0.1"
+  }
+}

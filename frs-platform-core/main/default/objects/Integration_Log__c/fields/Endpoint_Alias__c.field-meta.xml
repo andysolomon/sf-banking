@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Endpoint_Alias__c</fullName>
+    <label>Endpoint Alias</label>
+    <type>Text</type>
+    <length>255</length>
+    <description>Named Credential alias/path. NEVER a raw URL or secret.</description>
+    <required>false</required>
+</CustomField>

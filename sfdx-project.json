@@ -1,0 +1,30 @@
+{
+  "packageDirectories": [
+    {
+      "versionName": "ver 0.1",
+      "versionNumber": "0.1.0.NEXT",
+      "path": "frs-platform-core",
+      "default": false,
+      "package": "frs-platform-core",
+      "versionDescription": ""
+    },
+    {
+      "versionName": "ver 0.1",
+      "versionNumber": "0.1.0.NEXT",
+      "path": "frs-banking",
+      "default": true,
+      "package": "frs-banking",
+      "versionDescription": "",
+      "dependencies": [
+        { "package": "frs-platform-core", "versionNumber": "0.1.0.LATEST" }
+      ]
+    }
+  ],
+  "namespace": "",
+  "sfdcLoginUrl": "https://login.salesforce.com",
+  "sourceApiVersion": "67.0",
+  "packageAliases": {
+    "frs-platform-core": "0HogK00000038fNSAQ",
+    "frs-banking": "0HogK00000038gzSAA"
+  }
+}

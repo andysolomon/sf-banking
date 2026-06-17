@@ -1,0 +1,157 @@
+# Reusable Salesforce DevOps pipeline templates — MULTI-PACKAGE variant.
+#
+# DERIVED from the todo-app's ci-templates/salesforce-pipeline.yml (the platform team's
+# reusable template). Adopting that template for a SECOND app surfaced two gaps: it
+# hardcodes `force-app` and a single `SF_PACKAGE`. This variant generalizes both:
+#   - SF_PACKAGE_DIRS — the package source paths to scan/deploy (space-separated)
+#   - SF_PERMSETS     — permission sets to assign (space-separated)
+#   - package + install jobs build/install CORE then BANKING in dependency order.
+# PLATFORM BACKLOG (Phase 9 candidate): fold these generalizations back so ONE shared
+# template serves both single- and multi-package consumers (parameterized source paths +
+# an ordered package list). See docs/devops/pipeline-design.md §Reuse.
+#
+# Secrets (consumer's, masked): SFDX_AUTH_URL_{DEVHUB,PROD}_B64 — DevHub UNPROTECTED (MR
+# pipelines need it), PROD PROTECTED (main/hotfix only). Decoded at point of use, never logged.
+
+variables:
+  SF_CLI_VERSION: "2.137.7"        # pin; bump deliberately
+  SF_CI_IMAGE: "node:22"
+  SF_SCRATCH_DEF: "config/project-scratch-def.json"
+  SF_PACKAGE_DIRS: "frs-platform-core frs-banking"   # scan/deploy targets (order-insensitive for deploy)
+  SF_CORE_PACKAGE: "frs-platform-core"               # built + installed FIRST
+  SF_APP_PACKAGE: "frs-banking"                      # depends on core; built + installed SECOND
+  SF_PERMSETS: ""                  # consumer sets (space-separated), e.g. "Banking_Servicing_Agent"
+  SF_COVERAGE_MIN: "85"
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+
+# --- shared fragments -------------------------------------------------------------
+
+.sf-cli:
+  image: $SF_CI_IMAGE
+  before_script:
+    - command -v sf >/dev/null 2>&1 || npm install --global @salesforce/cli@${SF_CLI_VERSION}
+    - sf --version
+
+.sf-cache:
+  cache:
+    key: "$CI_COMMIT_REF_SLUG"
+    paths: [.npm/]
+
+# Conditional execution: org-burning jobs run only when SF source/config changed.
+# Paths cover BOTH package dirs (the generalization over the single-package template).
+.sf-rules-code-gated:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes: &sf-code-paths
+        - frs-platform-core/**/*
+        - frs-banking/**/*
+        - config/**/*
+        - sfdx-project.json
+        - package.json
+        - package-lock.json
+        - .forceignore
+        - .gitlab-ci.yml
+        - ci-templates/**/*
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"'
+      changes: *sf-code-paths
+    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\// && $CI_PIPELINE_SOURCE != "schedule"'
+      changes: *sf-code-paths
+
+.sf-rules-release-gated:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"'
+      changes: *sf-code-paths
+    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\// && $CI_PIPELINE_SOURCE != "schedule"'
+      changes: *sf-code-paths
+
+# --- job templates ----------------------------------------------------------------
+
+# Static analysis over BOTH package dirs. Unconditional in the consumer (anchors pipeline
+# existence for docs-only MRs); consumer supplies the rule.
+.sf-scan:
+  extends: [.sf-cli, .sf-cache]
+  script:
+    - command -v java >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq --no-install-recommends default-jre-headless > /dev/null; }
+    - sf plugins inspect code-analyzer >/dev/null 2>&1 || sf plugins install code-analyzer
+    - WS=""; for d in $SF_PACKAGE_DIRS; do WS="$WS --workspace $d"; done
+    - sf code-analyzer run $WS --rule-selector Recommended --severity-threshold 2 --output-file scan-results.json
+  artifacts:
+    when: always
+    paths: [scan-results.json]
+    expire_in: 30 days
+
+# Jest (LWC) — free runner, code-gated.
+.sf-lwc-test:
+  extends: [.sf-cache, .sf-rules-code-gated]
+  image: node:22
+  script:
+    - npm ci
+    - npm run test:unit
+
+# Apex tests + coverage gate in a scratch org. Burns 1 scratch create.
+# `sf project deploy start` (no --source-dir) deploys the WHOLE project = BOTH packages.
+.sf-apex-test:
+  extends: [.sf-cli, .sf-cache, .sf-rules-code-gated]
+  script:
+    - echo "$SFDX_AUTH_URL_DEVHUB_B64" | base64 -d | sf org login sfdx-url --alias devhub --set-default-dev-hub --sfdx-url-stdin -
+    - sf org create scratch --definition-file "$SF_SCRATCH_DEF" --alias ci-$CI_JOB_ID --duration-days 1 --set-default --wait 15
+    - sf project deploy start --target-org ci-$CI_JOB_ID --wait 20
+    - for p in $SF_PERMSETS; do sf org assign permset --name "$p" --target-org ci-$CI_JOB_ID; done
+    - sf apex run test --target-org ci-$CI_JOB_ID --test-level RunLocalTests --code-coverage --result-format human --wait 20 | tee apex-test.log
+    - COVERAGE=$(grep -Eo 'Org Wide Coverage *[0-9]+' apex-test.log | grep -Eo '[0-9]+' || echo 0)
+    - 'echo "Org-wide coverage: ${COVERAGE}%"'
+    - test "$COVERAGE" -ge "$SF_COVERAGE_MIN"
+  after_script:
+    - sf org delete scratch --target-org ci-$CI_JOB_ID --no-prompt || true
+  artifacts:
+    when: always
+    paths: [apex-test.log]
+    expire_in: 30 days
+
+# Build BOTH package versions, CORE first (so the app's dependency resolves to it),
+# then the APP. Emits both SubscriberPackageVersionIds for the install stages.
+.sf-package:
+  extends: [.sf-cli, .sf-cache, .sf-rules-release-gated]
+  script:
+    - echo "$SFDX_AUTH_URL_DEVHUB_B64" | base64 -d | sf org login sfdx-url --alias devhub --set-default-dev-hub --sfdx-url-stdin -
+    - sf package version create --package "$SF_CORE_PACKAGE" --installation-key-bypass --code-coverage --wait 40 --json | tee core-version.json
+    - CORE_SPV_ID=$(node -e "console.log(JSON.parse(require('fs').readFileSync('core-version.json')).result.SubscriberPackageVersionId)")
+    - sf package version create --package "$SF_APP_PACKAGE" --installation-key-bypass --code-coverage --wait 40 --json | tee app-version.json
+    - APP_SPV_ID=$(node -e "console.log(JSON.parse(require('fs').readFileSync('app-version.json')).result.SubscriberPackageVersionId)")
+    - printf 'CORE_SPV_ID=%s\nAPP_SPV_ID=%s\n' "$CORE_SPV_ID" "$APP_SPV_ID" > version.env
+  artifacts:
+    when: on_success
+    reports:
+      dotenv: version.env
+    paths: [core-version.json, app-version.json]
+    expire_in: 90 days
+
+# Install BOTH artifacts into a fresh scratch org IN ORDER (core → app), run post-install.
+.sf-staging-install:
+  extends: [.sf-cli, .sf-rules-release-gated]
+  script:
+    - echo "$SFDX_AUTH_URL_DEVHUB_B64" | base64 -d | sf org login sfdx-url --alias devhub --set-default-dev-hub --sfdx-url-stdin -
+    - sf org create scratch --definition-file "$SF_SCRATCH_DEF" --alias staging-$CI_JOB_ID --duration-days 1 --set-default --wait 15
+    - sf package install --package "$CORE_SPV_ID" --target-org staging-$CI_JOB_ID --wait 20 --no-prompt
+    - sf package install --package "$APP_SPV_ID" --target-org staging-$CI_JOB_ID --wait 20 --no-prompt
+    - for p in $SF_PERMSETS; do sf org assign permset --name "$p" --target-org staging-$CI_JOB_ID; done
+    - echo "staging install OK (core → app). e2e/post-install checks run here from Phase 8."
+  after_script:
+    - sf org delete scratch --target-org staging-$CI_JOB_ID --no-prompt || true
+
+# Install BOTH artifacts into prod IN ORDER. Manual gate (Release Manager hat).
+.sf-prod-install:
+  extends: [.sf-cli, .sf-cache]
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"'
+      changes: *sf-code-paths
+      when: manual
+    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\// && $CI_PIPELINE_SOURCE != "schedule"'
+      changes: *sf-code-paths
+      when: manual
+  allow_failure: false
+  script:
+    - echo "$SFDX_AUTH_URL_PROD_B64" | base64 -d | sf org login sfdx-url --alias prod --sfdx-url-stdin -
+    - sf package install --package "$CORE_SPV_ID" --target-org prod --wait 30 --no-prompt
+    - sf package install --package "$APP_SPV_ID" --target-org prod --wait 30 --no-prompt
+    - echo "Post-install — smoke + tags + changelog per docs/release/release-runbook.md (Phase 9)"

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <label>Integration Log</label>
+    <pluralLabel>Integration Logs</pluralLabel>
+    <nameField>
+        <label>Integration Log Name</label>
+        <type>AutoNumber</type>
+        <displayFormat>ILOG-{00000000}</displayFormat>
+    </nameField>
+    <sharingModel>Private</sharingModel>
+    <visibility>Public</visibility>
+</CustomObject>

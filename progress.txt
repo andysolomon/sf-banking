@@ -1,0 +1,93 @@
+Banking App Salesforce Platform Engineering Project (#2) - Progress
+Generated: 2026-06-16 EDT
+Plan: docs/IMPLEMENTATION_PLAN.md
+Sibling: projects/todo-app (v1.0.0, feature-complete) - this project INHERITS its pipeline,
+         governance templates, scratch-org discipline, and free-tier org/limits knowledge.
+Weighting: this project deepens the 3 JD areas todo-app left thin -
+           integration patterns, reusable platform enablers, financial-data security.
+           Core phases = 3, 6, 7, 9. The app is the cargo; the integration platform is the product.
+Packages: frs-platform-core (base enabler) <- frs-banking (extension, depends on core).
+Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + failure switch).
+
+[~] 0.0 - Plan confirmed by Andy: chose to START this thread 2026-06-17 (scope/2-pkg/mock accepted).
+          Folded in 2 study-derived additions: data-classification.md (Phase 3), daily reconciliation
+          job (Phase 7). OPEN interactive call, DEFERRED to Phase 4: reuse todo-app DevHub/"prod" orgs
+          (shared 6 scratch/day budget) vs fresh orgs. Not needed for Phases 1-3 (docs only).
+[x] 1.0 - Phase 1 - Governance and Project Charter (inherit + adapt from todo-app) - DONE 2026-06-17
+    [x] 1.1 - charter.md (two-team operating model, hats incl. Integration Architect + InfoSec, SoD)
+    [x] 1.2 - change-management.md (+ Integration/Security change class with InfoSec gate; 2-pkg release rules)
+    [x] 1.3 - definition-of-done.md (incl. "no secrets in source", HttpCalloutMock tests, data-classification)
+    [x] 1.4 - ADR-001-methodology.md (hybrid reuse + platform-team-as-product / package-versioning framing)
+[x] 2.0 - Phase 2 - Functional and Non-Functional Requirements - DONE 2026-06-17 (BASELINE SET)
+    [x] 2.1 - functional-requirements.md (FR-1 balances, FR-2 transfer, FR-3/4 webhooks, FR-5 event, FR-6 flow)
+    [x] 2.2 - non-functional-requirements.md (NFR-1 sec/least-priv, 2 idempotency, 3 resilience, 4 isolation,
+              5 secrets, 6 SLA/circuit-breaker, 7 audit/reconciliation, 8 code quality, 9 reproducibility/2-pkg)
+    [x] 2.3 - rtm.md skeleton (FR-1..6, NFR-1..9, all 'planned'; design col fills at Phase 3)
+    [x] 2.4 - risk-register.md (13 risks; R-3..R-8 integration-focused: dup posting, core down, webhook spoof/replay, drift)
+[x] 3.0 - Phase 3 - Integration & Security Architecture (CENTERPIECE) - DONE 2026-06-17
+    [x] 3.1 - data-model.md (ERD mermaid; Bank_Account__c cached balance, Transaction__c LDV ledger,
+              Transfer__c state machine; Integration_Log__c + Dead_Letter__c; money = Number(18,0) minor units)
+    [x] 3.2 - security-model.md (OWD Private, sharing, FLS, 3 perm sets incl. least-priv integration user,
+              access matrix, enforcement->verification map) + data-classification.md (4 tiers, per-field, redaction/Shield)
+    [x] 3.3 - integration-architecture.md (pattern selection, callout framework, inbound, PE-vs-CDC, error
+              taxonomy, monitoring/recon) + sequence-diagrams.md (4 mermaid flows: balance/transfer/webhook/event)
+    [x] 3.4 - ADR-002-branching (reuse + 2-pkg specifics), ADR-003-two-package-architecture, ADR-004-integration-auth-pattern
+    [x] 3.5 - RTM design column filled for all FR-1..6 + NFR-1..9; all rows now 'designed'
+[~] 4.0 - Phase 4 - Source Control, Two-Package DX Project, and the Vercel Mock - NON-INTERACTIVE PARTS DONE 2026-06-17
+    [x] 4.1 - DX project scaffold: sfdx-project.json (frs-platform-core + frs-banking, dep core<-banking, api 67.0),
+              config/project-scratch-def.json, .forceignore, .gitignore, package source dirs w/ .gitkeep
+    [~] 4.2 - ORG DECISION = REUSE todo-app DevHub (orgfarm-60a172912c) + prod (orgfarm-5b96907065); shared 6-scratch/day budget.
+              INTERACTIVE, PENDING ANDY: register BOTH packages in DevHub (sf package create x2); create sf-banking GitLab project.
+    [x] 4.3 - DONE: ci-templates/salesforce-multipackage-pipeline.yml (derived from sf-todo template, generalized:
+              SF_PACKAGE_DIRS/SF_CORE_PACKAGE/SF_APP_PACKAGE/SF_PERMSETS; build core->banking, install core->banking)
+              + .gitlab-ci.yml consumer (5 stages) + docs/devops/pipeline-design.md. YAML validated (ruby). Needs CI vars set (4.2).
+    [x] 4.4 - frs-core-banking-mock DONE (code only): mock/ Vercel serverless - GET /api/accounts/:id/balance,
+              POST /api/transfers (Idempotency-Key -> deterministic core_transfer_id), POST /api/webhooks/send (inbound),
+              x-mock-fail switch (500/timeout/422), vercel.json maxDuration 15. node --check passes. DEPLOY pending Andy (vercel login).
+    [x] 4.5 - DONE: scripts/deploy-mock.sh; pipeline-design.md (above); .gitlab/merge_request_templates/Default.md
+              (+ Integration-Security class, secrets/idempotency/callout-mock gates); docs/governance/code-review-checklist.md (integration section)
+    [ ] 4.6 - Verify gates (PMD + failing test red->green) + mock reachable via curl - PENDING (needs orgs/CI/deploy)
+    NOTE: deliberately NOT using Vercel Workflow for the mock's timeout-simulation (hook suggested it) - it's a
+          stateless test double, not a durable process; bounded MOCK_DELAY_MS + maxDuration is the right fit.
+[~] 5.0 - Phase 5 - Walking Skeleton - METADATA STAGED 2026-06-17 (code written + validated offline; deploy/proof PENDING interactive)
+    [x] 5.1 - STAGED: frs-platform-core - CalloutService (generic Named-Cred GET + structured logging) + Integration_Log__c
+              (4 fields) + CalloutServiceTest (success/error/throw via HttpCalloutMock)
+    [x] 5.2 - STAGED: frs-banking - Bank_Account__c (6 fields) + BankAccountController.getLiveBalance (FLS, fail-soft) +
+              bankAccountCard LWC (imperative, fail-soft) + Banking_Servicing_Agent perm set (read-only financial fields).
+              Named Credential Core_Banking = POST-INSTALL (docs/devops/named-credential-setup.md), per ADR-004 (no secret in source).
+    [~] 5.3 - WRITTEN: BankAccountControllerTest (success/core-down) + bankAccountCard Jest (render/fail-soft) + package.json/jest.config.js.
+              Coverage gate + LIVE post-install smoke (docs/release/smoke-test-v0.1.0.md ready) PENDING deploy.
+    [ ] 5.4 - Package both versions, install core->banking into prod, tag v0.1.0, advance RTM FR-1/NFR-5/NFR-6 - PENDING interactive
+    NOTE: 27 metadata files validated offline (node --check JS; all 18 XML well-formed; JSON valid). CHANGELOG [Unreleased] staged.
+          Apex cannot be compiled offline -> deploy-time (Andy) is first real compile; small fixes possible at first deploy (expected).
+[ ] 6.0 - Phase 6 - Reusable Platform-Core Package (THE ENABLER)
+    [ ] 6.1 - Logging/error framework (Logger + Integration_Log__c, correlation id, payload redaction)
+    [ ] 6.2 - Callout framework matured: retry+backoff (Queueable), idempotency key, circuit-breaker, typed result
+    [ ] 6.3 - Generic Platform Event publisher + Dead_Letter__c + replay entry point
+    [ ] 6.4 - frs-platform-core/README.md = explicit API/abstractions doc (worked example for the next adopter team)
+    [ ] 6.5 - Core package own test suite (mocked) >=85%, independent of frs-banking
+[ ] 7.0 - Phase 7 - Banking Integration Features + Failure Drills
+    [ ] 7.1 - FR-2 Transfer (outbound callout via framework, idempotency key, Transfer__c state machine, double-submit safe)
+    [ ] 7.2 - FR-3/FR-4 inbound webhooks (@RestResource: posted-txn -> Transaction__c, fraud-alert -> Case; auth+validate+replay-protect)
+    [ ] 7.3 - FR-5 Platform Event Transfer_Completed__e (publish via core; subscriber updates ledger; CDC trade-off note)
+    [ ] 7.4 - FR-6 servicing screen flow (open-account / file-a-dispute); batch statement/interest job (bulkified)
+    [ ] 7.5 - DRILLS (mandatory, via mock failure switch): timeout->retry; 500->exhaust->dead-letter->replay; dup transfer blocked; webhook replay rejected
+[ ] 8.0 - Phase 8 - Test, Quality, and Security Strategy
+    [ ] 8.1 - test-strategy.md (HttpCalloutMock matrix, inbound RestContext mocks, Jest, Playwright vs installed pkg + live mock incl. forced-failure)
+    [ ] 8.2 - Security tests: cross-customer isolation negatives, FLS on balance, integration-user least-priv assertion
+    [ ] 8.3 - RTM test column 100%; coverage gate >=85% enforced in CI
+[ ] 9.0 - Phase 9 - Release Management & Integration Operations
+    [ ] 9.1 - release/rollback/hotfix runbooks adapted for 2-package (install/rollback order core->banking, dep pinning), each rehearsed
+    [ ] 9.2 - integration-failure-runbook.md + LIVE DRILL (core banking down: detect->degrade->replay->comms)
+    [ ] 9.3 - infosec-signoff.md (auth pattern, secret handling, least-priv user, data classification, sign-off checklist)
+    [ ] 9.4 - salesforce-release-readiness.md (seasonal impact on the integration); deployment-metrics.md (DORA incl. drill recovery)
+    [ ] 9.5 - Release v1.0.0 (both packages, compatible versions, tags, CHANGELOG, RTM frozen); post-release-review-v1.0.0.md
+
+DEFERRED (post-v1.0.0): todo-app adopts frs-platform-core (consumer #2 = "multiple app teams" proof);
+         Data Cloud (study-only); FSC, Shield enablement, real sandbox tiers, SAFe ceremonies.
+
+CONSTRAINTS (carried from todo-app, still apply):
+  - 6 scratch-org creates/day SHARED across local + CI AND now shared with todo-app - count before pushing (2-pkg builds burn more)
+  - main protected = MR-only; merges via glab mr merge
+  - SFDX auth URLs base64 in masked CI vars; never reuse unverified Thrivent metrics
+  - do not push/merge/deploy (or deploy the Vercel mock) unless Andy explicitly asks

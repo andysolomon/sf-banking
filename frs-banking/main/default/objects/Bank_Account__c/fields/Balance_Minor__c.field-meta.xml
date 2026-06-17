@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Balance_Minor__c</fullName>
+    <label>Balance (minor units)</label>
+    <type>Number</type>
+    <precision>18</precision>
+    <scale>0</scale>
+    <description>Cached balance in minor units (cents). Source of truth = core banking.</description>
+    <required>false</required>
+</CustomField>

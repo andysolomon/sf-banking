@@ -1,0 +1,6 @@
+.sf/
+.sfdx/
+node_modules/
+mock/.vercel/
+*.log
+.DS_Store

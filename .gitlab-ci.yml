@@ -1,0 +1,63 @@
+# banking-app CI — CONSUMER of the multi-package Salesforce pipeline template.
+#
+# The platform logic lives in ci-templates/salesforce-multipackage-pipeline.yml (derived
+# from the todo-app's reusable template, generalized for two packages). This file adopts
+# it: include the template, set SF_* variables, define thin jobs that `extends:` the
+# `.sf-*` templates. Design authority: docs/devops/pipeline-design.md.
+#
+# Secrets (masked CI variables): SFDX_AUTH_URL_{DEVHUB,PROD}_B64 — SAME org auth URLs as
+# sf-todo (we reuse the todo-app Dev Hub + "prod"). DevHub UNPROTECTED (MR pipelines need
+# it), PROD PROTECTED (main/hotfix only).
+
+include:
+  - local: ci-templates/salesforce-multipackage-pipeline.yml
+
+variables:
+  SF_PACKAGE_DIRS: "frs-platform-core frs-banking"
+  SF_CORE_PACKAGE: "frs-platform-core"
+  SF_APP_PACKAGE: "frs-banking"
+  SF_PERMSETS: "Banking_Servicing_Agent Banking_Integration_User"   # created in Phase 5/7
+
+stages:
+  - validate
+  - test
+  - package
+  - test-release
+  - release
+
+# --- validate ----
+# scan stays UNCONDITIONAL (anchors pipeline existence for docs-only MRs under
+# only_allow_merge_if_pipeline_succeeds); the template leaves scan's rule to the consumer.
+scan:
+  extends: .sf-scan
+  stage: validate
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"'
+    - if: '$CI_COMMIT_BRANCH =~ /^hotfix\// && $CI_PIPELINE_SOURCE != "schedule"'
+
+lwc-test:
+  extends: .sf-lwc-test
+  stage: validate
+
+# --- test ----
+apex-test:
+  extends: .sf-apex-test
+  stage: test
+
+# --- package ---- (builds core → banking)
+version:
+  extends: .sf-package
+  stage: package
+
+# --- test-release ---- (installs core → banking into staging scratch)
+staging-install:
+  extends: .sf-staging-install
+  stage: test-release
+  needs: [version]
+
+# --- release ---- (installs core → banking into prod; manual gate)
+prod-install:
+  extends: .sf-prod-install
+  stage: release
+  needs: [version, staging-install]

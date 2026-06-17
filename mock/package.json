@@ -1,0 +1,7 @@
+{
+  "name": "frs-core-banking-mock",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mock core-banking SaaS for the banking-app integration lab (Vercel serverless functions). Bidirectional + failure switch.",
+  "license": "MIT"
+}
