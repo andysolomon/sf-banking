@@ -36,30 +36,45 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
 [~] 4.0 - Phase 4 - Source Control, Two-Package DX Project, and the Vercel Mock - NON-INTERACTIVE PARTS DONE 2026-06-17
     [x] 4.1 - DX project scaffold: sfdx-project.json (frs-platform-core + frs-banking, dep core<-banking, api 67.0),
               config/project-scratch-def.json, .forceignore, .gitignore, package source dirs w/ .gitkeep
-    [~] 4.2 - ORG DECISION = REUSE todo-app DevHub (orgfarm-60a172912c) + prod (orgfarm-5b96907065); shared 6-scratch/day budget.
-              INTERACTIVE, PENDING ANDY: register BOTH packages in DevHub (sf package create x2); create sf-banking GitLab project.
+    [~] 4.2 - LARGELY DONE 2026-06-17. ORG REALITY: orgfarm orgs NOT authed; used the connected **agentforce DevHub**
+              (00DgK00000QYu0qUAD, alias DevHub) + prod = **prodtest** (00Dg500000BzwFGEAZ) per Andy's call.
+              [x] Packages REGISTERED: frs-platform-core 0HogK00000038fNSAQ, frs-banking 0HogK00000038gzSAA (aliases in sfdx-project.json;
+                  re-added banking default:true + dependency on core that `sf package create` had stripped).
+              [x] GitLab project CREATED: gitlab.com/andysolomon/sf-banking (private); nested git repo; 67 files pushed to main [skip ci];
+                  only_allow_merge_if_pipeline_succeeds=true; main protected (push/merge=maintainer).
+              [ ] CI VARS PENDING ANDY (blocked for agent = credential harvesting): set SFDX_AUTH_URL_DEVHUB_B64 (masked, UNprotected)
+                  + SFDX_AUTH_URL_PROD_B64 (masked, PROTECTED) from base64 of the org auth URLs. Commands handed off.
     [x] 4.3 - DONE: ci-templates/salesforce-multipackage-pipeline.yml (derived from sf-todo template, generalized:
               SF_PACKAGE_DIRS/SF_CORE_PACKAGE/SF_APP_PACKAGE/SF_PERMSETS; build core->banking, install core->banking)
               + .gitlab-ci.yml consumer (5 stages) + docs/devops/pipeline-design.md. YAML validated (ruby). Needs CI vars set (4.2).
-    [x] 4.4 - frs-core-banking-mock DONE (code only): mock/ Vercel serverless - GET /api/accounts/:id/balance,
-              POST /api/transfers (Idempotency-Key -> deterministic core_transfer_id), POST /api/webhooks/send (inbound),
-              x-mock-fail switch (500/timeout/422), vercel.json maxDuration 15. node --check passes. DEPLOY pending Andy (vercel login).
+    [x] 4.4 - frs-core-banking-mock DEPLOYED + LIVE 2026-06-17. Vercel project "mock" (prj_nxJBk3crONvNh5bX85uWLEF5V7wc,
+              team_1h9Xca1fcyThRFdpK9runicq). Deployment URL: https://mock-9l74ecylz-andrewsolomonedus-projects.vercel.app
+              (use the project's stable production alias for the Named Credential). ssoProtection DISABLED (was blocking with 401;
+              PATCH needed teamId to persist). VERIFIED live: balance 200 JSON, transfer returns core_transfer_id, idempotency holds
+              (same key -> same ct_ id), x-mock-fail:500 -> 500. Endpoints: GET /api/accounts/:id/balance, POST /api/transfers, POST /api/webhooks/send.
     [x] 4.5 - DONE: scripts/deploy-mock.sh; pipeline-design.md (above); .gitlab/merge_request_templates/Default.md
               (+ Integration-Security class, secrets/idempotency/callout-mock gates); docs/governance/code-review-checklist.md (integration section)
     [ ] 4.6 - Verify gates (PMD + failing test red->green) + mock reachable via curl - PENDING (needs orgs/CI/deploy)
     NOTE: deliberately NOT using Vercel Workflow for the mock's timeout-simulation (hook suggested it) - it's a
           stateless test double, not a durable process; bounded MOCK_DELAY_MS + maxDuration is the right fit.
-[~] 5.0 - Phase 5 - Walking Skeleton - METADATA STAGED 2026-06-17 (code written + validated offline; deploy/proof PENDING interactive)
+[~] 5.0 - Phase 5 - Walking Skeleton - FIRST COMPILE GREEN 2026-06-18 (deployed+tested vs devhub, free; 3 real bugs caught & fixed; package/install/tag PENDING)
     [x] 5.1 - STAGED: frs-platform-core - CalloutService (generic Named-Cred GET + structured logging) + Integration_Log__c
               (4 fields) + CalloutServiceTest (success/error/throw via HttpCalloutMock)
     [x] 5.2 - STAGED: frs-banking - Bank_Account__c (6 fields) + BankAccountController.getLiveBalance (FLS, fail-soft) +
               bankAccountCard LWC (imperative, fail-soft) + Banking_Servicing_Agent perm set (read-only financial fields).
               Named Credential Core_Banking = POST-INSTALL (docs/devops/named-credential-setup.md), per ADR-004 (no secret in source).
-    [~] 5.3 - WRITTEN: BankAccountControllerTest (success/core-down) + bankAccountCard Jest (render/fail-soft) + package.json/jest.config.js.
-              Coverage gate + LIVE post-install smoke (docs/release/smoke-test-v0.1.0.md ready) PENDING deploy.
+    [x] 5.3 - VERIFIED vs devhub (free, no scratch): Apex 6/6 pass; bankAccountCard Jest 2/2 pass. branch feature/walking-skeleton-live-balance.
+              Coverage gate + LIVE post-install smoke (docs/release/smoke-test-v0.1.0.md ready) PENDING package install.
     [ ] 5.4 - Package both versions, install core->banking into prod, tag v0.1.0, advance RTM FR-1/NFR-5/NFR-6 - PENDING interactive
-    NOTE: 27 metadata files validated offline (node --check JS; all 18 XML well-formed; JSON valid). CHANGELOG [Unreleased] staged.
-          Apex cannot be compiled offline -> deploy-time (Andy) is first real compile; small fixes possible at first deploy (expected).
+    NOTE: First real compile (deploy to devhub) caught 3 genuine bugs the offline checks could not:
+          (1) `currency` is an Apex RESERVED WORD -> BankAccountController would not compile. Renamed DTO prop to currencyCode;
+              the core JSON key is literally "currency" so switched to JSON.deserializeUntyped (no typed member can be named currency).
+          (2) .forceignore missing **/__tests__/** -> the Jest spec deployed into the LWC bundle -> LWC1702 (invalid createElement).
+          (3) FLS GOTCHA: source/MDAPI deploys grant field-level security ONLY via the permset, NEVER to the SysAdmin profile (unlike
+              the UI). So the running user saw "No such column" (SOQL) / "fields inaccessible" (DML) until the permset was assigned.
+              The controller's WITH USER_MODE query makes this load-bearing. Proven fix = pipeline assigns SF_PERMSETS before apex tests
+              (template already does this, matching sf-todo). Also fixed: consumer .gitlab-ci.yml listed Banking_Integration_User (does
+              not exist till Phase 7) -> would break the CI permset-assign loop; trimmed to Banking_Servicing_Agent.
 [ ] 6.0 - Phase 6 - Reusable Platform-Core Package (THE ENABLER)
     [ ] 6.1 - Logging/error framework (Logger + Integration_Log__c, correlation id, payload redaction)
     [ ] 6.2 - Callout framework matured: retry+backoff (Queueable), idempotency key, circuit-breaker, typed result
