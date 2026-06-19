@@ -38,7 +38,7 @@ private class BankAccountControllerTest {
         BankAccountController.BalanceView v = BankAccountController.getLiveBalance(ba.Id);
         Test.stopTest();
         System.assertEquals(250000L, v.balanceMinor, 'balance should come from the core-banking response');
-        System.assertEquals('USD', v.currency);
+        System.assertEquals('USD', v.currencyCode);
     }
 
     @isTest

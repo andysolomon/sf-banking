@@ -19,7 +19,7 @@ export default class BankAccountCard extends LightningElement {
         this.error = undefined;
         try {
             const v = await getLiveBalance({ bankAccountId: this.recordId });
-            const currency = v.currency || 'USD';
+            const currency = v.currencyCode || 'USD';
             this.balance = (v.balanceMinor / 100).toLocaleString(undefined, {
                 style: 'currency',
                 currency
