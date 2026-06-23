@@ -25,7 +25,7 @@ describe('c-bank-account-card', () => {
         getLiveBalance.mockResolvedValue({
             accountId: 'a01',
             balanceMinor: 250000,
-            currency: 'USD',
+            currencyCode: 'USD',
             asOf: '2026-06-17T00:00:00Z'
         });
 

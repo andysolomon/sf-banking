@@ -34,12 +34,16 @@ public with sharing class BankAccountController {
             throw new AuraHandledException('Balance temporarily unavailable');
         }
 
-        CoreBalance cb = (CoreBalance) JSON.deserialize(res.getBody(), CoreBalance.class);
+        // Untyped deserialize: the core JSON key "currency" is an Apex reserved word and
+        // cannot be a typed-class member, so we read the body as a Map.
+        Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+        Object bm = body.get('balance_minor');
+
         BalanceView v = new BalanceView();
         v.accountId = bankAccountId;
-        v.balanceMinor = cb.balance_minor;
-        v.currency = cb.currency;
-        v.asOf = cb.as_of;
+        v.balanceMinor = (bm == null) ? null : Long.valueOf(String.valueOf(bm));
+        v.currencyCode = (String) body.get('currency');
+        v.asOf = (String) body.get('as_of');
         return v;
     }
 
@@ -47,15 +51,7 @@ public with sharing class BankAccountController {
     public class BalanceView {
         @AuraEnabled public Id accountId;
         @AuraEnabled public Long balanceMinor;
-        @AuraEnabled public String currency;
+        @AuraEnabled public String currencyCode;
         @AuraEnabled public String asOf;
-    }
-
-    // Maps the core-banking JSON (snake_case) into Apex.
-    public class CoreBalance {
-        public Long balance_minor;
-        public String currency;
-        public String as_of;
-        public String core_account_id;
     }
 }

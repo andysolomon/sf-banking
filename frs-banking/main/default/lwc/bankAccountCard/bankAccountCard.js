@@ -19,13 +19,13 @@ export default class BankAccountCard extends LightningElement {
         this.error = undefined;
         try {
             const v = await getLiveBalance({ bankAccountId: this.recordId });
-            const currency = v.currency || 'USD';
+            const currency = v.currencyCode || 'USD';
             this.balance = (v.balanceMinor / 100).toLocaleString(undefined, {
                 style: 'currency',
                 currency
             });
             this.asOf = v.asOf;
-        } catch (e) {
+        } catch {
             // Fail-soft: never show a stack/error page for a transient core-banking issue.
             this.balance = undefined;
             this.error = 'Balance temporarily unavailable';

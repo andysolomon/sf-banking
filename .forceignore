@@ -3,3 +3,8 @@ package.xml
 .sf
 **/jsconfig.json
 **/.eslintrc.json
+
+# LWC Jest
+**/__tests__/**
+
+node_modules/

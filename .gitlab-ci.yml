@@ -16,7 +16,7 @@ variables:
   SF_PACKAGE_DIRS: "frs-platform-core frs-banking"
   SF_CORE_PACKAGE: "frs-platform-core"
   SF_APP_PACKAGE: "frs-banking"
-  SF_PERMSETS: "Banking_Servicing_Agent Banking_Integration_User"   # created in Phase 5/7
+  SF_PERMSETS: "Banking_Servicing_Agent"   # walking skeleton; add Banking_Integration_User once it exists (Phase 7)
 
 stages:
   - validate
