@@ -34,15 +34,18 @@ private class BankAccountControllerTest {
             PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Banking_Servicing_Agent' LIMIT 1];
             insert new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id);
         }
-        // The agent must SEE the account, but OWD is Private — so the agent OWNS it
-        // (models a servicing book). The controller's WITH USER_MODE query then succeeds.
-        Id agentId = [SELECT Id FROM User WHERE Username = :AGENT_USERNAME LIMIT 1].Id;
+        // Account is standard (admin can insert it).
         Account a = new Account(Name = 'Ada Lovelace');
         insert a;
-        insert new Bank_Account__c(
-            Name = 'Checking', OwnerId = agentId, Customer__c = a.Id,
-            Core_Account_Id__c = 'core-abc', Type__c = 'Checking', Status__c = 'Active'
-        );
+        // Insert the Bank_Account__c AS THE AGENT: the agent has create + field FLS via the
+        // perm set, and owning it satisfies OWD Private so the controller can read it back.
+        User agent = [SELECT Id FROM User WHERE Username = :AGENT_USERNAME LIMIT 1];
+        System.runAs(agent) {
+            insert new Bank_Account__c(
+                Name = 'Checking', Customer__c = a.Id,
+                Core_Account_Id__c = 'core-abc', Type__c = 'Checking', Status__c = 'Active'
+            );
+        }
     }
 
     private static User agentUser() {

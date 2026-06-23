@@ -16,7 +16,10 @@
       "package": "frs-banking",
       "versionDescription": "",
       "dependencies": [
-        { "package": "frs-platform-core", "versionNumber": "0.1.0.LATEST" }
+        {
+          "package": "frs-platform-core",
+          "versionNumber": "0.1.0.LATEST"
+        }
       ]
     }
   ],
@@ -25,6 +28,7 @@
   "sourceApiVersion": "67.0",
   "packageAliases": {
     "frs-platform-core": "0HogK00000038fNSAQ",
-    "frs-banking": "0HogK00000038gzSAA"
+    "frs-banking": "0HogK00000038gzSAA",
+    "frs-platform-core@0.1.0-1": "04tgK000000DvIDQA0"
   }
 }
