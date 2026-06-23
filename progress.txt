@@ -54,14 +54,15 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               (same key -> same ct_ id), x-mock-fail:500 -> 500. Endpoints: GET /api/accounts/:id/balance, POST /api/transfers, POST /api/webhooks/send.
     [x] 4.5 - DONE: scripts/deploy-mock.sh; pipeline-design.md (above); .gitlab/merge_request_templates/Default.md
               (+ Integration-Security class, secrets/idempotency/callout-mock gates); docs/governance/code-review-checklist.md (integration section)
-    [~] 4.6 - GATE DRILL via MR !1 (2026-06-23): scan GREEN + lwc-test GREEN; apex-test reaches login+create.
+    [x] 4.6 - GATE DRILL via MR !1 (2026-06-23): PIPELINE FULLY GREEN — scan + lwc-test + apex-test all pass.
+              apex-test in a FRESH scratch org: 7 tests, 100% pass, 95% org-wide coverage (gate cleared).
               CI vars set (Andy "U run them"). Fixed 4 CI bugs in sequence, each push revealing the next:
               (a) scan: 2 High violations — pmd ApexCRUDViolation (CalloutService insert → `insert as user`) +
                   eslint no-unused-vars (catch(e) → optional `catch {`). (b) login aborted: sf CLI 2.137 stdin
                   pipe → switched to --sfdx-url-file. (c) login didn't persist: node:22 "unsettled top-level
-                  await" → pinned SF_CI_IMAGE=node:20 (now "Successfully authorized" in CI).
-              REMAINING: apex-test create fails LIMIT_EXCEEDED (DailyScratchOrgs 0/6, shared w/ other projects)
-              — resets midnight org-time; re-run for green apex-test + the rest of the pipeline.
+                  await" → pinned SF_CI_IMAGE=node:20. (d) apex-test create blocked by DailyScratchOrgs 0/6
+                  (shared budget) → retried after reset (3/6) → green. The pipeline now authenticates, gates,
+                  and proves the walking skeleton in a clean packaged org end to end.
     NOTE: deliberately NOT using Vercel Workflow for the mock's timeout-simulation (hook suggested it) - it's a
           stateless test double, not a durable process; bounded MOCK_DELAY_MS + maxDuration is the right fit.
 [~] 5.0 - Phase 5 - Walking Skeleton - FIRST COMPILE GREEN 2026-06-18 (deployed+tested vs devhub, free; 3 real bugs caught & fixed; package/install/tag PENDING)
