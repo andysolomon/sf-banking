@@ -15,7 +15,7 @@
 
 variables:
   SF_CLI_VERSION: "2.137.7"        # pin; bump deliberately
-  SF_CI_IMAGE: "node:22"
+  SF_CI_IMAGE: "node:20"          # node:22 + sf CLI 2.137 = "unsettled top-level await" → login never persists
   SF_SCRATCH_DEF: "config/project-scratch-def.json"
   SF_PACKAGE_DIRS: "frs-platform-core frs-banking"   # scan/deploy targets (order-insensitive for deploy)
   SF_CORE_PACKAGE: "frs-platform-core"               # built + installed FIRST
