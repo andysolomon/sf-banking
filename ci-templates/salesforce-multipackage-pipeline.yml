@@ -93,7 +93,7 @@ variables:
 .sf-apex-test:
   extends: [.sf-cli, .sf-cache, .sf-rules-code-gated]
   script:
-    - echo "$SFDX_AUTH_URL_DEVHUB_B64" | base64 -d | sf org login sfdx-url --alias devhub --set-default-dev-hub --sfdx-url-stdin -
+    - echo "$SFDX_AUTH_URL_DEVHUB_B64" | base64 -d > /tmp/devhub-auth.txt && sf org login sfdx-url --sfdx-url-file /tmp/devhub-auth.txt --alias devhub --set-default-dev-hub && rm -f /tmp/devhub-auth.txt
     - sf org create scratch --definition-file "$SF_SCRATCH_DEF" --alias ci-$CI_JOB_ID --duration-days 1 --set-default --wait 15
     - sf project deploy start --target-org ci-$CI_JOB_ID --wait 20
     - for p in $SF_PERMSETS; do sf org assign permset --name "$p" --target-org ci-$CI_JOB_ID; done
@@ -113,7 +113,7 @@ variables:
 .sf-package:
   extends: [.sf-cli, .sf-cache, .sf-rules-release-gated]
   script:
-    - echo "$SFDX_AUTH_URL_DEVHUB_B64" | base64 -d | sf org login sfdx-url --alias devhub --set-default-dev-hub --sfdx-url-stdin -
+    - echo "$SFDX_AUTH_URL_DEVHUB_B64" | base64 -d > /tmp/devhub-auth.txt && sf org login sfdx-url --sfdx-url-file /tmp/devhub-auth.txt --alias devhub --set-default-dev-hub && rm -f /tmp/devhub-auth.txt
     - sf package version create --package "$SF_CORE_PACKAGE" --installation-key-bypass --code-coverage --wait 40 --json | tee core-version.json
     - CORE_SPV_ID=$(node -e "console.log(JSON.parse(require('fs').readFileSync('core-version.json')).result.SubscriberPackageVersionId)")
     - sf package version create --package "$SF_APP_PACKAGE" --installation-key-bypass --code-coverage --wait 40 --json | tee app-version.json
@@ -130,7 +130,7 @@ variables:
 .sf-staging-install:
   extends: [.sf-cli, .sf-rules-release-gated]
   script:
-    - echo "$SFDX_AUTH_URL_DEVHUB_B64" | base64 -d | sf org login sfdx-url --alias devhub --set-default-dev-hub --sfdx-url-stdin -
+    - echo "$SFDX_AUTH_URL_DEVHUB_B64" | base64 -d > /tmp/devhub-auth.txt && sf org login sfdx-url --sfdx-url-file /tmp/devhub-auth.txt --alias devhub --set-default-dev-hub && rm -f /tmp/devhub-auth.txt
     - sf org create scratch --definition-file "$SF_SCRATCH_DEF" --alias staging-$CI_JOB_ID --duration-days 1 --set-default --wait 15
     - sf package install --package "$CORE_SPV_ID" --target-org staging-$CI_JOB_ID --wait 20 --no-prompt
     - sf package install --package "$APP_SPV_ID" --target-org staging-$CI_JOB_ID --wait 20 --no-prompt
@@ -151,7 +151,7 @@ variables:
       when: manual
   allow_failure: false
   script:
-    - echo "$SFDX_AUTH_URL_PROD_B64" | base64 -d | sf org login sfdx-url --alias prod --sfdx-url-stdin -
+    - echo "$SFDX_AUTH_URL_PROD_B64" | base64 -d > /tmp/prod-auth.txt && sf org login sfdx-url --sfdx-url-file /tmp/prod-auth.txt --alias prod && rm -f /tmp/prod-auth.txt
     - sf package install --package "$CORE_SPV_ID" --target-org prod --wait 30 --no-prompt
     - sf package install --package "$APP_SPV_ID" --target-org prod --wait 30 --no-prompt
     - echo "Post-install — smoke + tags + changelog per docs/release/release-runbook.md (Phase 9)"
