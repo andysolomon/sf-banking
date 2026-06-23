@@ -54,7 +54,14 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               (same key -> same ct_ id), x-mock-fail:500 -> 500. Endpoints: GET /api/accounts/:id/balance, POST /api/transfers, POST /api/webhooks/send.
     [x] 4.5 - DONE: scripts/deploy-mock.sh; pipeline-design.md (above); .gitlab/merge_request_templates/Default.md
               (+ Integration-Security class, secrets/idempotency/callout-mock gates); docs/governance/code-review-checklist.md (integration section)
-    [ ] 4.6 - Verify gates (PMD + failing test red->green) + mock reachable via curl - PENDING (needs orgs/CI/deploy)
+    [~] 4.6 - GATE DRILL via MR !1 (2026-06-23): scan GREEN + lwc-test GREEN; apex-test reaches login+create.
+              CI vars set (Andy "U run them"). Fixed 4 CI bugs in sequence, each push revealing the next:
+              (a) scan: 2 High violations — pmd ApexCRUDViolation (CalloutService insert → `insert as user`) +
+                  eslint no-unused-vars (catch(e) → optional `catch {`). (b) login aborted: sf CLI 2.137 stdin
+                  pipe → switched to --sfdx-url-file. (c) login didn't persist: node:22 "unsettled top-level
+                  await" → pinned SF_CI_IMAGE=node:20 (now "Successfully authorized" in CI).
+              REMAINING: apex-test create fails LIMIT_EXCEEDED (DailyScratchOrgs 0/6, shared w/ other projects)
+              — resets midnight org-time; re-run for green apex-test + the rest of the pipeline.
     NOTE: deliberately NOT using Vercel Workflow for the mock's timeout-simulation (hook suggested it) - it's a
           stateless test double, not a durable process; bounded MOCK_DELAY_MS + maxDuration is the right fit.
 [~] 5.0 - Phase 5 - Walking Skeleton - FIRST COMPILE GREEN 2026-06-18 (deployed+tested vs devhub, free; 3 real bugs caught & fixed; package/install/tag PENDING)
@@ -77,6 +84,20 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               => FR-1 live-proven; NFR-5 (no secret in source) proven; platform-core logging proven in a real callout.
               REMAINING for v0.1.0 tag: install core->banking into prodtest + tag. PROPER path = pipeline (needs CI vars - Andy)
               OR explicit-authorized direct CLI install. NC is post-install (deployed ad hoc here for the proof; mock URL = the deployment hash URL).
+
+    >>> RESUME PLAN (Andy chose Option B 2026-06-22: do the FULL pipeline release TOMORROW with a fresh 6 scratch-create budget) <<<
+      PREREQ (Andy, the hard gate): set 2 CI vars on sf-banking. Run via `! ...` in-session or own terminal (agent BLOCKED = credential harvesting):
+        cd ~/canvaser/projects/banking-app
+        D=$(sf org display --target-org DevHub --verbose --json | python3 -c "import sys,json,base64;print(base64.b64encode(json.load(sys.stdin)['result']['sfdxAuthUrl'].encode()).decode())")
+        echo "$D" | base64 -d | head -c 8   # must show force://  (else = sf 2.137 redaction gotcha, same as sf-todo)
+        glab variable set SFDX_AUTH_URL_DEVHUB_B64 "$D" --masked              # UNprotected (MR pipelines need it)
+        P=$(sf org display --target-org prodtest --verbose --json | python3 -c "import sys,json,base64;print(base64.b64encode(json.load(sys.stdin)['result']['sfdxAuthUrl'].encode()).decode())")
+        glab variable set SFDX_AUTH_URL_PROD_B64 "$P" --masked --protected    # PROTECTED (main/hotfix only)
+      THEN agent drives: open MR feature/walking-skeleton-live-balance -> main (scan/lwc-test/apex-test; do the 4.6 gate red->green drill on it)
+        -> merge -> main pipeline builds both versions + staging-install (core->banking) -> MANUAL prod-install to prodtest -> tag v0.1.0.
+      Already-built artifacts (pipeline can reuse or rebuild): core 04tgK000000DvIDQA0, banking 04tgK000000DvJpQAK.
+      Scratch: full release needs 2 creates/day; active limit fine (2 used by hotel-booking+sfra-dev, expire 2026-06-27). Daily budget had 1 left
+        on 2026-06-22 -> wait for reset. NC durability: use the mock's STABLE production URL (not the deployment-hash URL) for the real post-install NC.
     NOTE (2026-06-22): package VERSION CREATE caught 3 MORE real bugs offline+devhub checks missed (build org assigns NO perm set):
           (4) core had NO perm set -> CalloutServiceTest could not query Integration_Log__c fields. Added Platform_Core_Consumer perm set
               (the package now ships the grant for its OWN enabler objects); tests System.runAs a user holding it.
