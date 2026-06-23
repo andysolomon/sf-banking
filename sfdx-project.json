@@ -29,6 +29,7 @@
   "packageAliases": {
     "frs-platform-core": "0HogK00000038fNSAQ",
     "frs-banking": "0HogK00000038gzSAA",
-    "frs-platform-core@0.1.0-1": "04tgK000000DvIDQA0"
+    "frs-platform-core@0.1.0-1": "04tgK000000DvIDQA0",
+    "frs-banking@0.1.0-1": "04tgK000000DvJpQAK"
   }
 }
