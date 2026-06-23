@@ -43,8 +43,10 @@ public with sharing class CalloutService {
 
     private static void log(String alias, String correlationId, String status) {
         // Best-effort structured log; never let logging failure mask the callout outcome.
+        // `as user` enforces CRUD/FLS in the caller's context (the consumer holds
+        // Platform_Core_Consumer, which grants Integration_Log__c create + field edit).
         try {
-            insert new Integration_Log__c(
+            insert as user new Integration_Log__c(
                 Correlation_Id__c = correlationId,
                 Direction__c = 'Outbound',
                 Status__c = status,

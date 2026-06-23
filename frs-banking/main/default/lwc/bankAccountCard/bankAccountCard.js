@@ -25,7 +25,7 @@ export default class BankAccountCard extends LightningElement {
                 currency
             });
             this.asOf = v.asOf;
-        } catch (e) {
+        } catch {
             // Fail-soft: never show a stack/error page for a transient core-banking issue.
             this.balance = undefined;
             this.error = 'Balance temporarily unavailable';
