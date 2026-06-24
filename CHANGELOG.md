@@ -40,6 +40,13 @@ external core-banking mock via a Named Credential.
   and define `CalloutService`, so they cannot coexist in one org. That version is
   reinstallable; `platform-enablement` source/package untouched.
 
-### Post-install steps still owed (per docs/release/release + named-credential-setup)
-- Configure Named Credential **Core_Banking** → the mock's stable production URL (ADR-004).
-- Run `docs/release/smoke-test-v0.1.0.md` against prodtest.
+### Post-install — DONE 2026-06-23
+- Named Credential **Core_Banking** deployed to prodtest (legacy no-auth: `NoAuthentication`
+  / `Anonymous`) → stable production URL `https://mock-andrewsolomonedus-projects.vercel.app`
+  (ADR-004; no secret in source).
+- Smoke test (`docs/release/smoke-test-v0.1.0.md`) — API checks PASS in prodtest: live
+  NC→mock callout HTTP 200, balance $1,323.19; `Integration_Log__c` Success/Outbound,
+  alias-only; mock fail switch `x-mock-fail:500`→500 confirmed; no endpoint/secret in
+  installed source. RTM FR-1 / NFR-5 / NFR-6 → **verified**.
+- Remaining = Andy's UI sign-off only: add `bankAccountCard` to the `Bank_Account__c`
+  record page, confirm live render + the fail-soft "temporarily unavailable" on mock-fail.
