@@ -149,7 +149,13 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               (idempotency key) -> success: Completed + PlatformEvents.publish(Transfer_Completed__e); transient: Failed + dead-letter
               (replayable); 4xx: Failed no dead-letter. ZERO HTTP code in frs-banking. TransferServiceTest 5/5 (blank-key, idempotent,
               success+publish, transient->dead-letter, 4xx). Full suite 61 tests 100%, 94% org-wide coverage.
-    [ ] 7.2 - FR-3/FR-4 inbound webhooks (@RestResource: posted-txn -> Transaction__c, fraud-alert -> Case; auth+validate+replay-protect)
+    [x] 7.2 - FR-3/FR-4 inbound webhooks BUILT+GREEN on devhub. WebhookResource @RestResource (/core-banking/webhooks/*):
+              defense-in-depth = (1) shared-secret X-Webhook-Token vs Webhook_Config__c hierarchy custom setting (value post-install,
+              not in source); (2) replay guard = X-Event-Id recorded in Webhook_Event__c (UNIQUE) -> duplicate delivery => 200
+              ignored, no reprocess; (3) field validation. Routes posted_transaction -> Transaction__c (ledger, External_Txn_Id__c
+              UNIQUE) + fraud_alert -> Case. All logged Webhook/Inbound via Logger. NEW least-privilege permset Banking_Integration_User
+              (the NFR-1 integration identity; re-add to SF_PERMSETS when packaging). WebhookResourceTest 7/7 (auth-401, posted-201,
+              replay-200-idempotent, fraud->Case-201, missing-event-id-400, unknown/missing-txn-400). Full suite 68 tests 100%, 93% cov.
     [ ] 7.3 - FR-5 Platform Event Transfer_Completed__e (publish via core; subscriber updates ledger; CDC trade-off note)
     [ ] 7.4 - FR-6 servicing screen flow (open-account / file-a-dispute); batch statement/interest job (bulkified)
     [ ] 7.5 - DRILLS (mandatory, via mock failure switch): timeout->retry; 500->exhaust->dead-letter->replay; dup transfer blocked; webhook replay rejected
