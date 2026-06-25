@@ -142,8 +142,13 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               objectPermissions grouped contiguously. + design bug: replay() looped callouts (DML-between-callouts) -> Batchable scope 1.
     PENDING (not started this turn): deploy/package/release to prodtest (CI minutes exhausted; later MR) + Banking_Servicing_Agent
               gained the 3 new Integration_Log__c fields. NOT pushed/merged (feature branch only, validated on devhub).
-[ ] 7.0 - Phase 7 - Banking Integration Features + Failure Drills
-    [ ] 7.1 - FR-2 Transfer (outbound callout via framework, idempotency key, Transfer__c state machine, double-submit safe)
+[~] 7.0 - Phase 7 - Banking Integration Features + Failure Drills - IN PROGRESS (7.1 done 2026-06-25, branch feature/phase6-platform-core)
+    [x] 7.1 - FR-2 Transfer BUILT+GREEN on devhub. Transfer__c (state machine Requested->Completed|Failed; Idempotency_Key__c UNIQUE
+              = DB double-submit guard) + Transfer_Completed__e platform event. TransferService.initiate (idempotent pre-check + unique
+              backstop; ASYNC via TransferCalloutQueueable - no callout in trigger/same txn). Queueable consumes CalloutService.send
+              (idempotency key) -> success: Completed + PlatformEvents.publish(Transfer_Completed__e); transient: Failed + dead-letter
+              (replayable); 4xx: Failed no dead-letter. ZERO HTTP code in frs-banking. TransferServiceTest 5/5 (blank-key, idempotent,
+              success+publish, transient->dead-letter, 4xx). Full suite 61 tests 100%, 94% org-wide coverage.
     [ ] 7.2 - FR-3/FR-4 inbound webhooks (@RestResource: posted-txn -> Transaction__c, fraud-alert -> Case; auth+validate+replay-protect)
     [ ] 7.3 - FR-5 Platform Event Transfer_Completed__e (publish via core; subscriber updates ledger; CDC trade-off note)
     [ ] 7.4 - FR-6 servicing screen flow (open-account / file-a-dispute); batch statement/interest job (bulkified)
