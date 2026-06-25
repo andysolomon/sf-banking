@@ -15,7 +15,7 @@
         <allowCreate>true</allowCreate>
         <allowEdit>false</allowEdit>
         <allowDelete>false</allowDelete>
-        <viewAllRecords>false</viewAllRecords>
+        <viewAllRecords>true</viewAllRecords>
         <modifyAllRecords>false</modifyAllRecords>
     </objectPermissions>
     <objectPermissions>
