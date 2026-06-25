@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Message__c</fullName>
+    <label>Message</label>
+    <type>LongTextArea</type>
+    <length>32768</length>
+    <visibleLines>5</visibleLines>
+    <required>false</required>
+    <description>Redaction-safe detail (status line / error summary). Never store raw payloads, tokens, or PII — Logger.redact() masks digits and secret-like tokens.</description>
+</CustomField>

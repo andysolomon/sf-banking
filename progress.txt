@@ -127,12 +127,21 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               The controller's WITH USER_MODE query makes this load-bearing. Proven fix = pipeline assigns SF_PERMSETS before apex tests
               (template already does this, matching sf-todo). Also fixed: consumer .gitlab-ci.yml listed Banking_Integration_User (does
               not exist till Phase 7) -> would break the CI permset-assign loop; trimmed to Banking_Servicing_Agent.
-[ ] 6.0 - Phase 6 - Reusable Platform-Core Package (THE ENABLER)
-    [ ] 6.1 - Logging/error framework (Logger + Integration_Log__c, correlation id, payload redaction)
-    [ ] 6.2 - Callout framework matured: retry+backoff (Queueable), idempotency key, circuit-breaker, typed result
-    [ ] 6.3 - Generic Platform Event publisher + Dead_Letter__c + replay entry point
-    [ ] 6.4 - frs-platform-core/README.md = explicit API/abstractions doc (worked example for the next adopter team)
-    [ ] 6.5 - Core package own test suite (mocked) >=85%, independent of frs-banking
+[x] 6.0 - Phase 6 - Reusable Platform-Core Package (THE ENABLER) - BUILT + GREEN on devhub 2026-06-25 (branch feature/phase6-platform-core)
+    [x] 6.1 - Logger (Integration_Log__c + Category/Message/Retry_Count; payload-safe redact() masks digits/tokens). LoggerTest.
+    [x] 6.2 - CalloutService matured: typed CalloutRequest/CalloutResult; send() + httpGet/httpPost; circuit-breaker (>=5 err/5min,
+              fail-fast); Idempotency-Key header; async retry+exp-backoff via CalloutRetryQueueable; dead-letters on exhaustion.
+    [x] 6.3 - PlatformEvents (EventBus wrapper + generic Integration_Event__e envelope) + Dead_Letter__c + DeadLetterService.replay
+              (single, 1 callout/txn) + DeadLetterReplayBatch (scope 1 bulk). All logged via Logger.
+    [x] 6.4 - frs-platform-core/README.md = explicit consumer API (install/permset/4 enablers/worked example/access-model/do-nots).
+    [x] 6.5 - Mocked test suite: LoggerTest, CalloutServiceTest, DeadLetterServiceTest, PlatformEventsTest = 21 tests, 100% pass,
+              92% org-wide coverage (every class >=82%, most 94-100%). Independent of frs-banking.
+    ACCEPTANCE MET: frs-banking has ZERO direct HTTP code — BankAccountController.getLiveBalance now consumes CalloutService.httpGet
+              (returns typed CalloutResult; fail-soft on !isSuccess incl. breaker). 3 real compile bugs caught+fixed on first deploy:
+              (a) `like` is an Apex reserved word (var rename); (b) WITH USER_MODE must precede ORDER BY/LIMIT; (c) permset XML needs
+              objectPermissions grouped contiguously. + design bug: replay() looped callouts (DML-between-callouts) -> Batchable scope 1.
+    PENDING (not started this turn): deploy/package/release to prodtest (CI minutes exhausted; later MR) + Banking_Servicing_Agent
+              gained the 3 new Integration_Log__c fields. NOT pushed/merged (feature branch only, validated on devhub).
 [ ] 7.0 - Phase 7 - Banking Integration Features + Failure Drills
     [ ] 7.1 - FR-2 Transfer (outbound callout via framework, idempotency key, Transfer__c state machine, double-submit safe)
     [ ] 7.2 - FR-3/FR-4 inbound webhooks (@RestResource: posted-txn -> Transaction__c, fraud-alert -> Case; auth+validate+replay-protect)

@@ -77,6 +77,21 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
+    <fieldPermissions>
+        <field>Integration_Log__c.Category__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>Integration_Log__c.Message__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>Integration_Log__c.Retry_Count__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
 
     <classAccesses>
         <apexClass>BankAccountController</apexClass>
@@ -84,6 +99,10 @@
     </classAccesses>
     <classAccesses>
         <apexClass>CalloutService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>Logger</apexClass>
         <enabled>true</enabled>
     </classAccesses>
 </PermissionSet>
