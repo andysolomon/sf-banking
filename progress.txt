@@ -181,12 +181,21 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               (no Bank_Account/Transfer access, can create Transaction). Negative-then-positive proofs.
     [x] 8.3 - RTM test column 100% (every FR-1..6 + NFR-1..9 now maps to a test/component; FR-1/NFR-5/6 verified, rest built).
               Coverage gate >=85% already enforced in CI (SF_COVERAGE_MIN=85 + test -ge). Full local suite 82 tests, 100%, 93% coverage.
-[ ] 9.0 - Phase 9 - Release Management & Integration Operations
-    [ ] 9.1 - release/rollback/hotfix runbooks adapted for 2-package (install/rollback order core->banking, dep pinning), each rehearsed
-    [ ] 9.2 - integration-failure-runbook.md + LIVE DRILL (core banking down: detect->degrade->replay->comms)
-    [ ] 9.3 - infosec-signoff.md (auth pattern, secret handling, least-priv user, data classification, sign-off checklist)
-    [ ] 9.4 - salesforce-release-readiness.md (seasonal impact on the integration); deployment-metrics.md (DORA incl. drill recovery)
-    [ ] 9.5 - Release v1.0.0 (both packages, compatible versions, tags, CHANGELOG, RTM frozen); post-release-review-v1.0.0.md
+[~] 9.0 - Phase 9 - Release Management & Integration Operations - DOCS DONE 2026-06-26; execution-gated items PENDING
+    [~] 9.1 - release-runbook.md + rollback-runbook.md + hotfix-runbook.md WRITTEN (2-package: install core->banking, rollback
+              banking->core reverse, dep pinning, protected hotfix/* ref). REHEARSALS pending (need orgs): rollback in-place
+              pair-downgrade + record RTO; hotfix drill.
+    [~] 9.2 - integration-failure-runbook.md WRITTEN (detect=breaker/logs/dead-letters -> degrade=fail-soft/queue -> recover=replay
+              + reconcile -> comms). LIVE DRILL pending (devhub + live mock fail switch; record integration MTTR). Behaviour already
+              proven deterministically in integration-failure-drills.md (7.5).
+    [x] 9.3 - infosec-signoff.md DONE: trust boundary + data-classification table, controls-with-evidence matrix (maps each control
+              to its test), residual risks (no-auth NC -> real External Cred for go-live), reviewer sign-off checklist. The
+              "Partner with InfoSec" artifact.
+    [x] 9.4 - salesforce-release-readiness.md DONE (seasonal impact scoped to the integration: API/NC/REST/PE/security/async + preview-org
+              procedure + post-upgrade drift check). deployment-metrics.md DONE (DORA from real history: 1 release, 7+ defects caught
+              pre-prod, gate-driven quality; integration MTTR pending the live drill).
+    [ ] 9.5 - Release v1.0.0 - PENDING (needs CI minutes for the pipeline OR break-glass; then both packages tagged compatible,
+              CHANGELOG, RTM frozen, post-release-review-v1.0.0.md). Blocked with Phase 6-8 on the same unpushed branch.
 
 DEFERRED (post-v1.0.0): todo-app adopts frs-platform-core (consumer #2 = "multiple app teams" proof);
          Data Cloud (study-only); FSC, Shield enablement, real sandbox tiers, SAFe ceremonies.
