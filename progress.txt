@@ -142,7 +142,7 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               objectPermissions grouped contiguously. + design bug: replay() looped callouts (DML-between-callouts) -> Batchable scope 1.
     PENDING (not started this turn): deploy/package/release to prodtest (CI minutes exhausted; later MR) + Banking_Servicing_Agent
               gained the 3 new Integration_Log__c fields. NOT pushed/merged (feature branch only, validated on devhub).
-[~] 7.0 - Phase 7 - Banking Integration Features + Failure Drills - IN PROGRESS (7.1 done 2026-06-25, branch feature/phase6-platform-core)
+[x] 7.0 - Phase 7 - Banking Integration Features + Failure Drills - BUILT+GREEN 2026-06-25 (branch feature/phase6-platform-core)
     [x] 7.1 - FR-2 Transfer BUILT+GREEN on devhub. Transfer__c (state machine Requested->Completed|Failed; Idempotency_Key__c UNIQUE
               = DB double-submit guard) + Transfer_Completed__e platform event. TransferService.initiate (idempotent pre-check + unique
               backstop; ASYNC via TransferCalloutQueueable - no callout in trigger/same txn). Queueable consumes CalloutService.send
@@ -168,7 +168,10 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               NFR-7 safety net behind idempotency+retries). Tests 6/6. KEY LESSON: Balance_Minor__c is read-only to all interactive
               permsets (core-owned) -> tests seed it via Database.insert SYSTEM_MODE with OwnerId=agent (FLS-bypass but agent-owned so
               the batch WITH USER_MODE query sees it under OWD Private). Full suite 77 tests 100% 93% coverage.
-    [ ] 7.5 - DRILLS (mandatory, via mock failure switch): timeout->retry; 500->exhaust->dead-letter->replay; dup transfer blocked; webhook replay rejected
+    [x] 7.5 - DRILLS recorded in docs/release/integration-failure-drills.md. All 4 proven by the test suite (HttpCalloutMock =
+              deterministic failure switch): (1) timeout/transient->retry->success; (2) 500->retry-exhaust->dead-letter->replay;
+              (3) duplicate transfer blocked (unique idempotency key); (4) webhook replay rejected (unique X-Event-Id in Webhook_Event__c).
+              Live mock switch (x-mock-fail:500->500) confirmed; manual live-drill procedure + drift safety net (ReconciliationBatch) documented.
 [ ] 8.0 - Phase 8 - Test, Quality, and Security Strategy
     [ ] 8.1 - test-strategy.md (HttpCalloutMock matrix, inbound RestContext mocks, Jest, Playwright vs installed pkg + live mock incl. forced-failure)
     [ ] 8.2 - Security tests: cross-customer isolation negatives, FLS on balance, integration-user least-priv assertion
