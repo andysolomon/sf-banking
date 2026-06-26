@@ -172,10 +172,15 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               deterministic failure switch): (1) timeout/transient->retry->success; (2) 500->retry-exhaust->dead-letter->replay;
               (3) duplicate transfer blocked (unique idempotency key); (4) webhook replay rejected (unique X-Event-Id in Webhook_Event__c).
               Live mock switch (x-mock-fail:500->500) confirmed; manual live-drill procedure + drift safety net (ReconciliationBatch) documented.
-[ ] 8.0 - Phase 8 - Test, Quality, and Security Strategy
-    [ ] 8.1 - test-strategy.md (HttpCalloutMock matrix, inbound RestContext mocks, Jest, Playwright vs installed pkg + live mock incl. forced-failure)
-    [ ] 8.2 - Security tests: cross-customer isolation negatives, FLS on balance, integration-user least-priv assertion
-    [ ] 8.3 - RTM test column 100%; coverage gate >=85% enforced in CI
+[x] 8.0 - Phase 8 - Test, Quality, and Security Strategy - BUILT+GREEN 2026-06-26 (branch feature/phase6-platform-core)
+    [x] 8.1 - docs/testing/test-strategy.md: the integration-app pyramid (HttpCalloutMock outbound matrix, RestContext inbound,
+              EventBus/Batchable, security via runAs, Jest, Playwright-vs-installed-pkg+live-mock incl. forced-failure spec); the
+              "failure switch = HttpCalloutMock not live", "run as the real persona", "describe FLS inside runAs" conventions; mock contract; CI gates.
+    [x] 8.2 - SecurityModelTest 5/5: cross-customer ISOLATION (agent B cannot see agent A's Bank_Account, OWD Private) + positive
+              control; balance read-only FLS (describe inside runAs + behavioral `update as user` blocked); integration-user LEAST-PRIV
+              (no Bank_Account/Transfer access, can create Transaction). Negative-then-positive proofs.
+    [x] 8.3 - RTM test column 100% (every FR-1..6 + NFR-1..9 now maps to a test/component; FR-1/NFR-5/6 verified, rest built).
+              Coverage gate >=85% already enforced in CI (SF_COVERAGE_MIN=85 + test -ge). Full local suite 82 tests, 100%, 93% coverage.
 [ ] 9.0 - Phase 9 - Release Management & Integration Operations
     [ ] 9.1 - release/rollback/hotfix runbooks adapted for 2-package (install/rollback order core->banking, dep pinning), each rehearsed
     [ ] 9.2 - integration-failure-runbook.md + LIVE DRILL (core banking down: detect->degrade->replay->comms)
