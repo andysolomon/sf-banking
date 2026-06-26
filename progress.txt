@@ -161,7 +161,13 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               re-delivery idempotent via Database.insert allOrNone=false SYSTEM_MODE). Runs as Automated Process; ledger OWD Private
               so Banking_Integration_User got viewAllRecords on Transaction__c (reconciliation reads whole ledger). PE-vs-CDC trade-off
               documented in handler header (explicit event = stable contract, decoupled, simpler replay). Test 2/2. Full suite 71 100% 93%.
-    [ ] 7.4 - FR-6 servicing screen flow (open-account / file-a-dispute); batch statement/interest job (bulkified)
+    [x] 7.4 - FR-6 Flow + batch jobs BUILT+GREEN. File_a_Dispute Screen Flow (input reason -> Create Case). StatementInterestBatch
+              (bulkified, Schedulable; daily interest Credit per active +balance account; idempotent per acct/day via unique
+              External_Txn_Id__c 'int-<acct>-<date>' + partial insert). ReconciliationBatch (Schedulable + AllowsCallouts, scope 1 =
+              1 callout/txn; fetches LIVE core balance via CalloutService, compares to SF cached Balance_Minor__c, mismatch -> Case;
+              NFR-7 safety net behind idempotency+retries). Tests 6/6. KEY LESSON: Balance_Minor__c is read-only to all interactive
+              permsets (core-owned) -> tests seed it via Database.insert SYSTEM_MODE with OwnerId=agent (FLS-bypass but agent-owned so
+              the batch WITH USER_MODE query sees it under OWD Private). Full suite 77 tests 100% 93% coverage.
     [ ] 7.5 - DRILLS (mandatory, via mock failure switch): timeout->retry; 500->exhaust->dead-letter->replay; dup transfer blocked; webhook replay rejected
 [ ] 8.0 - Phase 8 - Test, Quality, and Security Strategy
     [ ] 8.1 - test-strategy.md (HttpCalloutMock matrix, inbound RestContext mocks, Jest, Playwright vs installed pkg + live mock incl. forced-failure)
