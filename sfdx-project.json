@@ -1,16 +1,16 @@
 {
   "packageDirectories": [
     {
-      "versionName": "ver 0.2",
-      "versionNumber": "0.2.0.NEXT",
+      "versionName": "ver 0.2.1",
+      "versionNumber": "0.2.1.NEXT",
       "path": "frs-platform-core",
       "default": false,
       "package": "frs-platform-core",
       "versionDescription": ""
     },
     {
-      "versionName": "ver 0.2",
-      "versionNumber": "0.2.0.NEXT",
+      "versionName": "ver 0.2.1",
+      "versionNumber": "0.2.1.NEXT",
       "path": "frs-banking",
       "default": true,
       "package": "frs-banking",
@@ -18,7 +18,7 @@
       "dependencies": [
         {
           "package": "frs-platform-core",
-          "versionNumber": "0.2.0.LATEST"
+          "versionNumber": "0.2.1.LATEST"
         }
       ]
     }

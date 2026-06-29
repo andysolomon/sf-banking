@@ -25,10 +25,11 @@ public with sharing class BankAccountController {
         }
 
         String correlationId = String.valueOf(System.now().getTime()) + '-' + bankAccountId;
-        CalloutResult res = CalloutService.httpGet(
-            'Core_Banking/api/accounts/' + EncodingUtil.urlEncode(accts[0].Core_Account_Id__c, 'UTF-8') + '/balance',
-            correlationId
-        );
+        // Typed framework API (httpGet is the legacy HttpResponse method kept for back-compat).
+        CalloutResult res = CalloutService.send(
+            new CalloutRequest('GET',
+                'Core_Banking/api/accounts/' + EncodingUtil.urlEncode(accts[0].Core_Account_Id__c, 'UTF-8') + '/balance')
+                .withCorrelation(correlationId));
 
         // Typed result from the framework — fail-soft on anything but success (incl. a tripped
         // circuit breaker), so the LWC shows "temporarily unavailable" rather than an error page.

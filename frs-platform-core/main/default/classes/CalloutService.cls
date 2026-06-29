@@ -22,9 +22,32 @@ public with sharing class CalloutService {
 
     // ---- Convenience entry points -------------------------------------------------------
 
-    /** Simple GET → typed result (used by FR-1 balance). */
-    public static CalloutResult httpGet(String path, String correlationId) {
-        return send(new CalloutRequest('GET', path).withCorrelation(correlationId));
+    /**
+     * LEGACY simple GET → HttpResponse. Kept for BACKWARD COMPATIBILITY: the v0.1.0 app
+     * package's BankAccountController calls `httpGet` expecting HttpResponse. Changing this
+     * return type (as an earlier Phase-6 cut did) is a breaking base-package change that blocks
+     * the 2GP in-place upgrade — the resident v0.1.0 Apex fails to recompile against the new
+     * core. New code uses send()/CalloutResult (below); this stays for compatibility.
+     */
+    public static HttpResponse httpGet(String path, String correlationId) {
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint('callout:' + path);
+        req.setMethod('GET');
+        req.setTimeout(10000);
+        String status = Logger.SUCCESS;
+        try {
+            HttpResponse res = new Http().send(req);
+            if (res.getStatusCode() >= 400) {
+                status = Logger.ERROR;
+            }
+            return res;
+        } catch (Exception e) {
+            status = Logger.ERROR;
+            throw new CalloutException('Callout failed for ' + path + ': ' + e.getMessage());
+        } finally {
+            Logger.write(Logger.entry().category(Logger.CALLOUT).correlation(correlationId)
+                .direction(Logger.OUTBOUND).status(status).alias(path));
+        }
     }
 
     /** POST with idempotency key + async retry budget (used by FR-2 transfer). */
