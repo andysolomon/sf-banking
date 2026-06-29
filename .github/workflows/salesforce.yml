@@ -45,7 +45,10 @@ env:
   SF_PACKAGE_DIRS: "frs-platform-core frs-banking"
   SF_CORE_PACKAGE: "frs-platform-core"
   SF_APP_PACKAGE: "frs-banking"
-  SF_PERMSETS: "Platform_Core_Consumer Banking_Servicing_Agent Banking_Integration_User"
+  # Must match the perm sets that EXIST in the source on this branch — the assign loop
+  # hard-fails on a missing one. This branch is off main (v0.1.0 walking skeleton) = 2 perm
+  # sets. The Phase 6-9 PR adds Banking_Integration_User and must re-add it here in that PR.
+  SF_PERMSETS: "Platform_Core_Consumer Banking_Servicing_Agent"
   SF_SCRATCH_DEF: "config/project-scratch-def.json"
   SF_COVERAGE_MIN: "85"
 
