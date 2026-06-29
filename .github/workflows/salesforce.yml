@@ -53,7 +53,9 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      sf: ${{ steps.filter.outputs.sf }}
+      sf: ${{ steps.filter.outputs.sf }}     # gate for apex-test (also fires on workflow edits, so a CI change is tested)
+      src: ${{ steps.filter.outputs.src }}   # gate for RELEASE jobs — real package source only (NOT .github/workflows),
+                                             # so a workflow-only merge to main never cuts a release
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -69,6 +71,14 @@ jobs:
               - 'package-lock.json'
               - '.forceignore'
               - '.github/workflows/**'
+            src:
+              - 'frs-platform-core/**'
+              - 'frs-banking/**'
+              - 'config/**'
+              - 'sfdx-project.json'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.forceignore'
 
   # ---- GATE -------------------------------------------------------------------------------
   scan:
@@ -142,7 +152,7 @@ jobs:
     runs-on: ubuntu-latest
     container: node:20
     needs: [changes, apex-test]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.sf == 'true'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.src == 'true'
     outputs:
       core_spv: ${{ steps.build.outputs.core_spv }}
       app_spv: ${{ steps.build.outputs.app_spv }}
