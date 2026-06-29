@@ -34,6 +34,12 @@ concurrency:
 permissions:
   contents: read
 
+# Force bash for every run step. Inside the node:20 container /bin/sh is dash, which rejects
+# `set -o pipefail` (a bashism the scripts rely on). Debian-based node:20 ships bash.
+defaults:
+  run:
+    shell: bash
+
 env:
   SF_CLI_VERSION: "2.137.7"
   SF_PACKAGE_DIRS: "frs-platform-core frs-banking"
