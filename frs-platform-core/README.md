@@ -33,12 +33,16 @@ package, the public API classes would need `global`.
 Never build an `HttpRequest`. Describe the call; get a typed `CalloutResult`.
 
 ```apex
-// Simple GET (e.g. read a balance) — one attempt, fail-soft on the result:
-CalloutResult r = CalloutService.httpGet('Core_Banking/api/accounts/' + acctId + '/balance', correlationId);
+// Simple GET (e.g. read a balance) — one attempt, fail-soft on the typed result:
+CalloutResult r = CalloutService.send(
+    new CalloutRequest('GET', 'Core_Banking/api/accounts/' + acctId + '/balance').withCorrelation(correlationId));
 if (r.isSuccess) {
     Map<String,Object> body = (Map<String,Object>) JSON.deserializeUntyped(r.body);
     ...
 } // r.circuitOpen tells you it failed fast because the endpoint is unhealthy
+
+// NOTE: CalloutService.httpGet(path, corr) still exists but returns a raw HttpResponse — it's
+// the LEGACY method kept for backward compatibility (v0.1.0 consumers). New code uses send().
 
 // Resilient POST (e.g. a transfer) — idempotency key + async retry with backoff:
 CalloutService.httpPost(
