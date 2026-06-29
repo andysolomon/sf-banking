@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Dedup ledger for inbound webhooks. Event_Id__c is unique — recording it first is the replay guard: a repeated delivery fails the unique insert and is acknowledged without reprocessing.</description>
+    <label>Webhook Event</label>
+    <pluralLabel>Webhook Events</pluralLabel>
+    <nameField>
+        <label>Webhook Event Name</label>
+        <type>AutoNumber</type>
+        <displayFormat>WHE-{00000000}</displayFormat>
+    </nameField>
+    <sharingModel>Private</sharingModel>
+    <visibility>Public</visibility>
+</CustomObject>

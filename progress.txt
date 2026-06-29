@@ -65,7 +65,7 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
                   and proves the walking skeleton in a clean packaged org end to end.
     NOTE: deliberately NOT using Vercel Workflow for the mock's timeout-simulation (hook suggested it) - it's a
           stateless test double, not a durable process; bounded MOCK_DELAY_MS + maxDuration is the right fit.
-[~] 5.0 - Phase 5 - Walking Skeleton - FIRST COMPILE GREEN 2026-06-18 (deployed+tested vs devhub, free; 3 real bugs caught & fixed; package/install/tag PENDING)
+[x] 5.0 - Phase 5 - Walking Skeleton - RELEASED v0.1.0 to prodtest 2026-06-23 (FR-1 live balance; full pipeline gated; break-glass prod install)
     [x] 5.1 - STAGED: frs-platform-core - CalloutService (generic Named-Cred GET + structured logging) + Integration_Log__c
               (4 fields) + CalloutServiceTest (success/error/throw via HttpCalloutMock)
     [x] 5.2 - STAGED: frs-banking - Bank_Account__c (6 fields) + BankAccountController.getLiveBalance (FLS, fail-soft) +
@@ -73,10 +73,20 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               Named Credential Core_Banking = POST-INSTALL (docs/devops/named-credential-setup.md), per ADR-004 (no secret in source).
     [x] 5.3 - VERIFIED vs devhub (free, no scratch): Apex 6/6 pass; bankAccountCard Jest 2/2 pass. branch feature/walking-skeleton-live-balance.
               Coverage gate + LIVE post-install smoke (docs/release/smoke-test-v0.1.0.md ready) PENDING package install.
-    [~] 5.4 - PACKAGING (2026-06-22). Built directly via sf CLI (CI vars still unset; Package2VersionCreates=SEPARATE quota, no scratch).
-              [x] frs-platform-core 0.1.0.1 = 04tgK000000DvIDQA0 (BUILT).
-              [x] frs-banking 0.1.0.1 = 04tgK000000DvJpQAK (BUILT - its build installed core as a dep, compiled, banking tests passed.
-                  TWO-PACKAGE DEPENDENCY RESOLUTION PROVEN - the key unknown vs single-package todo-app).
+    [x] 5.4 - PACKAGED + RELEASED v0.1.0 (2026-06-23). Earlier direct builds 0.1.0.1 (06-22); the MR-merge pipeline
+              rebuilt 0.1.0.2 and that's what SHIPPED: frs-platform-core 0.1.0.2 = 04tgK000000DvlFQAS,
+              frs-banking 0.1.0.2 = 04tgK000000DvoTQAS. Tag v0.1.0 on main @ 3917fb2. CHANGELOG [0.1.0] written.
+              MAIN PIPELINE 2622737437: scan + lwc + apex-test (7/7, 95% cov) + package + staging-install ALL GREEN.
+              PROD INSTALL = BREAK-GLASS direct CLI (manual prod-install job failed ci_quota_exceeded = GitLab compute
+              minutes exhausted). Per drift-policy break-glass cycle, installed the SAME pipeline-built artifacts via
+              sf package install (Andy-authorized, documented in CHANGELOG). PREREQ: uninstalled the platform-enablement
+              sibling's frs-platform 0.2.0.1 (04tgK000000DvN3QAK) from prodtest first — both namespace-less + both define
+              CalloutService → cannot coexist in one org (reinstallable; platform-enablement src/package untouched).
+              POST-INSTALL DONE 2026-06-23: NC Core_Banking deployed to prodtest (legacy NoAuthentication/Anonymous) →
+              STABLE url https://mock-andrewsolomonedus-projects.vercel.app. Smoke API checks PASS in prodtest: live
+              NC→mock 200 ($1,323.19); Integration_Log__c Success/Outbound alias-only; mock fail switch x-mock-fail:500→500;
+              no secret in installed source. RTM FR-1/NFR-5/NFR-6 → verified. ONLY remaining = Andy's UI sign-off (add
+              bankAccountCard to the record page; confirm live render + fail-soft). PHASE 5 COMPLETE.
     [x] 5.3b - LIVE END-TO-END PROVEN 2026-06-22 (the walking skeleton's whole point). Could not scratch (3 active orgs from other
               projects = limit), so proved on DEVHUB (source already deployed): deployed a no-auth Named Credential Core_Banking ->
               the live Vercel mock; created Bank_Account__c(core_account_id='abc'); ran BankAccountController.getLiveBalance via anon
@@ -86,7 +96,7 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               REMAINING for v0.1.0 tag: install core->banking into prodtest + tag. PROPER path = pipeline (needs CI vars - Andy)
               OR explicit-authorized direct CLI install. NC is post-install (deployed ad hoc here for the proof; mock URL = the deployment hash URL).
 
-    >>> RESUME PLAN (Andy chose Option B 2026-06-22: do the FULL pipeline release TOMORROW with a fresh 6 scratch-create budget) <<<
+    >>> RESUME PLAN — ✅ EXECUTED 2026-06-23 (see 5.4 above): CI vars set, MR !1 merged, pipeline green, v0.1.0 released. Kept below for the record. <<<
       PREREQ (Andy, the hard gate): set 2 CI vars on sf-banking. Run via `! ...` in-session or own terminal (agent BLOCKED = credential harvesting):
         cd ~/canvaser/projects/banking-app
         D=$(sf org display --target-org DevHub --verbose --json | python3 -c "import sys,json,base64;print(base64.b64encode(json.load(sys.stdin)['result']['sfdxAuthUrl'].encode()).decode())")
@@ -117,28 +127,75 @@ Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + fail
               The controller's WITH USER_MODE query makes this load-bearing. Proven fix = pipeline assigns SF_PERMSETS before apex tests
               (template already does this, matching sf-todo). Also fixed: consumer .gitlab-ci.yml listed Banking_Integration_User (does
               not exist till Phase 7) -> would break the CI permset-assign loop; trimmed to Banking_Servicing_Agent.
-[ ] 6.0 - Phase 6 - Reusable Platform-Core Package (THE ENABLER)
-    [ ] 6.1 - Logging/error framework (Logger + Integration_Log__c, correlation id, payload redaction)
-    [ ] 6.2 - Callout framework matured: retry+backoff (Queueable), idempotency key, circuit-breaker, typed result
-    [ ] 6.3 - Generic Platform Event publisher + Dead_Letter__c + replay entry point
-    [ ] 6.4 - frs-platform-core/README.md = explicit API/abstractions doc (worked example for the next adopter team)
-    [ ] 6.5 - Core package own test suite (mocked) >=85%, independent of frs-banking
-[ ] 7.0 - Phase 7 - Banking Integration Features + Failure Drills
-    [ ] 7.1 - FR-2 Transfer (outbound callout via framework, idempotency key, Transfer__c state machine, double-submit safe)
-    [ ] 7.2 - FR-3/FR-4 inbound webhooks (@RestResource: posted-txn -> Transaction__c, fraud-alert -> Case; auth+validate+replay-protect)
-    [ ] 7.3 - FR-5 Platform Event Transfer_Completed__e (publish via core; subscriber updates ledger; CDC trade-off note)
-    [ ] 7.4 - FR-6 servicing screen flow (open-account / file-a-dispute); batch statement/interest job (bulkified)
-    [ ] 7.5 - DRILLS (mandatory, via mock failure switch): timeout->retry; 500->exhaust->dead-letter->replay; dup transfer blocked; webhook replay rejected
-[ ] 8.0 - Phase 8 - Test, Quality, and Security Strategy
-    [ ] 8.1 - test-strategy.md (HttpCalloutMock matrix, inbound RestContext mocks, Jest, Playwright vs installed pkg + live mock incl. forced-failure)
-    [ ] 8.2 - Security tests: cross-customer isolation negatives, FLS on balance, integration-user least-priv assertion
-    [ ] 8.3 - RTM test column 100%; coverage gate >=85% enforced in CI
-[ ] 9.0 - Phase 9 - Release Management & Integration Operations
-    [ ] 9.1 - release/rollback/hotfix runbooks adapted for 2-package (install/rollback order core->banking, dep pinning), each rehearsed
-    [ ] 9.2 - integration-failure-runbook.md + LIVE DRILL (core banking down: detect->degrade->replay->comms)
-    [ ] 9.3 - infosec-signoff.md (auth pattern, secret handling, least-priv user, data classification, sign-off checklist)
-    [ ] 9.4 - salesforce-release-readiness.md (seasonal impact on the integration); deployment-metrics.md (DORA incl. drill recovery)
-    [ ] 9.5 - Release v1.0.0 (both packages, compatible versions, tags, CHANGELOG, RTM frozen); post-release-review-v1.0.0.md
+[x] 6.0 - Phase 6 - Reusable Platform-Core Package (THE ENABLER) - BUILT + GREEN on devhub 2026-06-25 (branch feature/phase6-platform-core)
+    [x] 6.1 - Logger (Integration_Log__c + Category/Message/Retry_Count; payload-safe redact() masks digits/tokens). LoggerTest.
+    [x] 6.2 - CalloutService matured: typed CalloutRequest/CalloutResult; send() + httpGet/httpPost; circuit-breaker (>=5 err/5min,
+              fail-fast); Idempotency-Key header; async retry+exp-backoff via CalloutRetryQueueable; dead-letters on exhaustion.
+    [x] 6.3 - PlatformEvents (EventBus wrapper + generic Integration_Event__e envelope) + Dead_Letter__c + DeadLetterService.replay
+              (single, 1 callout/txn) + DeadLetterReplayBatch (scope 1 bulk). All logged via Logger.
+    [x] 6.4 - frs-platform-core/README.md = explicit consumer API (install/permset/4 enablers/worked example/access-model/do-nots).
+    [x] 6.5 - Mocked test suite: LoggerTest, CalloutServiceTest, DeadLetterServiceTest, PlatformEventsTest = 21 tests, 100% pass,
+              92% org-wide coverage (every class >=82%, most 94-100%). Independent of frs-banking.
+    ACCEPTANCE MET: frs-banking has ZERO direct HTTP code — BankAccountController.getLiveBalance now consumes CalloutService.httpGet
+              (returns typed CalloutResult; fail-soft on !isSuccess incl. breaker). 3 real compile bugs caught+fixed on first deploy:
+              (a) `like` is an Apex reserved word (var rename); (b) WITH USER_MODE must precede ORDER BY/LIMIT; (c) permset XML needs
+              objectPermissions grouped contiguously. + design bug: replay() looped callouts (DML-between-callouts) -> Batchable scope 1.
+    PENDING (not started this turn): deploy/package/release to prodtest (CI minutes exhausted; later MR) + Banking_Servicing_Agent
+              gained the 3 new Integration_Log__c fields. NOT pushed/merged (feature branch only, validated on devhub).
+[x] 7.0 - Phase 7 - Banking Integration Features + Failure Drills - BUILT+GREEN 2026-06-25 (branch feature/phase6-platform-core)
+    [x] 7.1 - FR-2 Transfer BUILT+GREEN on devhub. Transfer__c (state machine Requested->Completed|Failed; Idempotency_Key__c UNIQUE
+              = DB double-submit guard) + Transfer_Completed__e platform event. TransferService.initiate (idempotent pre-check + unique
+              backstop; ASYNC via TransferCalloutQueueable - no callout in trigger/same txn). Queueable consumes CalloutService.send
+              (idempotency key) -> success: Completed + PlatformEvents.publish(Transfer_Completed__e); transient: Failed + dead-letter
+              (replayable); 4xx: Failed no dead-letter. ZERO HTTP code in frs-banking. TransferServiceTest 5/5 (blank-key, idempotent,
+              success+publish, transient->dead-letter, 4xx). Full suite 61 tests 100%, 94% org-wide coverage.
+    [x] 7.2 - FR-3/FR-4 inbound webhooks BUILT+GREEN on devhub. WebhookResource @RestResource (/core-banking/webhooks/*):
+              defense-in-depth = (1) shared-secret X-Webhook-Token vs Webhook_Config__c hierarchy custom setting (value post-install,
+              not in source); (2) replay guard = X-Event-Id recorded in Webhook_Event__c (UNIQUE) -> duplicate delivery => 200
+              ignored, no reprocess; (3) field validation. Routes posted_transaction -> Transaction__c (ledger, External_Txn_Id__c
+              UNIQUE) + fraud_alert -> Case. All logged Webhook/Inbound via Logger. NEW least-privilege permset Banking_Integration_User
+              (the NFR-1 integration identity; re-add to SF_PERMSETS when packaging). WebhookResourceTest 7/7 (auth-401, posted-201,
+              replay-200-idempotent, fraud->Case-201, missing-event-id-400, unknown/missing-txn-400). Full suite 68 tests 100%, 93% cov.
+    [x] 7.3 - FR-5 Platform Event SUBSCRIBER BUILT+GREEN. Transfer_Completed_Trigger (after insert) -> TransferCompletedHandler
+              projects each completed transfer into Transaction__c ledger (Debit, External_Txn_Id__c='xfer-'+coreId UNIQUE =>
+              re-delivery idempotent via Database.insert allOrNone=false SYSTEM_MODE). Runs as Automated Process; ledger OWD Private
+              so Banking_Integration_User got viewAllRecords on Transaction__c (reconciliation reads whole ledger). PE-vs-CDC trade-off
+              documented in handler header (explicit event = stable contract, decoupled, simpler replay). Test 2/2. Full suite 71 100% 93%.
+    [x] 7.4 - FR-6 Flow + batch jobs BUILT+GREEN. File_a_Dispute Screen Flow (input reason -> Create Case). StatementInterestBatch
+              (bulkified, Schedulable; daily interest Credit per active +balance account; idempotent per acct/day via unique
+              External_Txn_Id__c 'int-<acct>-<date>' + partial insert). ReconciliationBatch (Schedulable + AllowsCallouts, scope 1 =
+              1 callout/txn; fetches LIVE core balance via CalloutService, compares to SF cached Balance_Minor__c, mismatch -> Case;
+              NFR-7 safety net behind idempotency+retries). Tests 6/6. KEY LESSON: Balance_Minor__c is read-only to all interactive
+              permsets (core-owned) -> tests seed it via Database.insert SYSTEM_MODE with OwnerId=agent (FLS-bypass but agent-owned so
+              the batch WITH USER_MODE query sees it under OWD Private). Full suite 77 tests 100% 93% coverage.
+    [x] 7.5 - DRILLS recorded in docs/release/integration-failure-drills.md. All 4 proven by the test suite (HttpCalloutMock =
+              deterministic failure switch): (1) timeout/transient->retry->success; (2) 500->retry-exhaust->dead-letter->replay;
+              (3) duplicate transfer blocked (unique idempotency key); (4) webhook replay rejected (unique X-Event-Id in Webhook_Event__c).
+              Live mock switch (x-mock-fail:500->500) confirmed; manual live-drill procedure + drift safety net (ReconciliationBatch) documented.
+[x] 8.0 - Phase 8 - Test, Quality, and Security Strategy - BUILT+GREEN 2026-06-26 (branch feature/phase6-platform-core)
+    [x] 8.1 - docs/testing/test-strategy.md: the integration-app pyramid (HttpCalloutMock outbound matrix, RestContext inbound,
+              EventBus/Batchable, security via runAs, Jest, Playwright-vs-installed-pkg+live-mock incl. forced-failure spec); the
+              "failure switch = HttpCalloutMock not live", "run as the real persona", "describe FLS inside runAs" conventions; mock contract; CI gates.
+    [x] 8.2 - SecurityModelTest 5/5: cross-customer ISOLATION (agent B cannot see agent A's Bank_Account, OWD Private) + positive
+              control; balance read-only FLS (describe inside runAs + behavioral `update as user` blocked); integration-user LEAST-PRIV
+              (no Bank_Account/Transfer access, can create Transaction). Negative-then-positive proofs.
+    [x] 8.3 - RTM test column 100% (every FR-1..6 + NFR-1..9 now maps to a test/component; FR-1/NFR-5/6 verified, rest built).
+              Coverage gate >=85% already enforced in CI (SF_COVERAGE_MIN=85 + test -ge). Full local suite 82 tests, 100%, 93% coverage.
+[~] 9.0 - Phase 9 - Release Management & Integration Operations - DOCS DONE 2026-06-26; execution-gated items PENDING
+    [~] 9.1 - release-runbook.md + rollback-runbook.md + hotfix-runbook.md WRITTEN (2-package: install core->banking, rollback
+              banking->core reverse, dep pinning, protected hotfix/* ref). REHEARSALS pending (need orgs): rollback in-place
+              pair-downgrade + record RTO; hotfix drill.
+    [~] 9.2 - integration-failure-runbook.md WRITTEN (detect=breaker/logs/dead-letters -> degrade=fail-soft/queue -> recover=replay
+              + reconcile -> comms). LIVE DRILL pending (devhub + live mock fail switch; record integration MTTR). Behaviour already
+              proven deterministically in integration-failure-drills.md (7.5).
+    [x] 9.3 - infosec-signoff.md DONE: trust boundary + data-classification table, controls-with-evidence matrix (maps each control
+              to its test), residual risks (no-auth NC -> real External Cred for go-live), reviewer sign-off checklist. The
+              "Partner with InfoSec" artifact.
+    [x] 9.4 - salesforce-release-readiness.md DONE (seasonal impact scoped to the integration: API/NC/REST/PE/security/async + preview-org
+              procedure + post-upgrade drift check). deployment-metrics.md DONE (DORA from real history: 1 release, 7+ defects caught
+              pre-prod, gate-driven quality; integration MTTR pending the live drill).
+    [ ] 9.5 - Release v1.0.0 - PENDING (needs CI minutes for the pipeline OR break-glass; then both packages tagged compatible,
+              CHANGELOG, RTM frozen, post-release-review-v1.0.0.md). Blocked with Phase 6-8 on the same unpushed branch.
 
 DEFERRED (post-v1.0.0): todo-app adopts frs-platform-core (consumer #2 = "multiple app teams" proof);
          Data Cloud (study-only); FSC, Shield enablement, real sandbox tiers, SAFe ceremonies.
@@ -148,3 +205,45 @@ CONSTRAINTS (carried from todo-app, still apply):
   - main protected = MR-only; merges via glab mr merge
   - SFDX auth URLs base64 in masked CI vars; never reuse unverified Thrivent metrics
   - do not push/merge/deploy (or deploy the Vercel mock) unless Andy explicitly asks
+
+=== LATEST (2026-06-23) — v0.1.0 PIPELINE RELEASE: built+staging-proven via CI; PROD install blocked + rerouted ===
+- MR !1 merged to main (3917fb2). Main pipeline GREEN through staging: scan, lwc-test, apex-test (scratch),
+  VERSION built fresh 0.1.0.2 (core 04tgK000000DvlFQAS, banking 04tgK000000DvoTQAS), staging-install (core->banking
+  into a scratch) all passed. prod-install reached the MANUAL gate.
+- prod-install via CI BLOCKED: free-tier GitLab compute minutes EXHAUSTED (job pending 600s, runner:none, plan=free).
+  Andy chose: complete prod via CLI. Job canceled.
+- CLI install into prodtest FAILED — COMPONENT COLLISION: prodtest is the SHARED prod org (has todo-app 1.0.0.1) and
+  the KEPT sibling project platform-enablement already installed its package **frs-platform 0.2.0.1**
+  (0HogK00000038c9SAA / SPV 04tgK000000DvN3QAK) which contains a CalloutService class -> banking-app's frs-platform-core
+  cannot own the same-named class in the same org.
+- DECISION (Andy): give banking-app its OWN prod org (separate from platform-enablement's frs-platform in prodtest).
+  PENDING ANDY (interactive): create a fresh Developer Edition org + `sf org login web --alias banking-prod`.
+  THEN agent: install core->banking (use the PIPELINE-built 0.1.0.2: 04tgK000000DvlFQAS then 04tgK000000DvoTQAS) into
+  banking-prod, tag v0.1.0, advance RTM. Andy also re-points CI var SFDX_AUTH_URL_PROD_B64 -> banking-prod for future pipeline prod releases.
+- LESSON (interview gold): reusing a SHARED prod org across two platform-style projects collided on a duplicated component
+  (CalloutService). Real fix = org-per-product OR a single shared platform package. Plus: free-tier CI minutes are a finite
+  shared resource across a namespace — a 16-min package build can exhaust the monthly pool mid-release.
+
+=== LATEST (2026-06-29) — GitHub Actions CI LANDED ON MAIN (PR #1 merged) ===
+PR #1 (feature/ci-github-actions, off main) GREEN end-to-end on a real run: changes -> scan (PMD+CPD, JRE installed)
+-> lwc-test -> apex-test (fresh scratch: deploy both pkgs, assign permsets, 7 tests 100%, 95% org-wide coverage,
+>=85% gate). Squash-merged to main (a2236f8). Branch protection ON main: required checks = scan + lwc-test + apex-test,
+strict (up-to-date), no force-push/deletion, conversation-resolution required, enforce_admins=false (solo break-glass).
+Dev Hub secret SFDX_AUTH_URL_DEVHUB_B64 set (pipe sf->base64->gh, never printed); SFDX_AUTH_URL_PROD_B64 already present
+(VERIFY it points at banking-prod, not prodtest). Co-developed with Andy live: he added bash default shell (dash in
+node:20 has no pipefail), JRE install in scan (PMD/CPD need Java), and a SECOND path filter `src` (excludes
+.github/workflows/**) so RELEASE jobs gate on real source while apex-test (gates on `sf`) still runs on workflow edits.
+I fixed: SF_PERMSETS must match the branch's source (dropped Banking_Integration_User on the v0.1.0 branch — re-add it
+in the Phase 6-9 PR). Freed scratch capacity by deleting 2 EXPIRED sibling orgs (hotel-booking, sfra-dev; Andy-authorized).
+REMAINING before a real release runs clean: (a) create the `production` GitHub Environment + required reviewer (the manual
+prod gate replacing GitLab when:manual); (b) confirm SFDX_AUTH_URL_PROD_B64 -> banking-prod. NEXT: open the Phase 6-9 PR
+-> v0.2.0 (MUST re-add Banking_Integration_User to SF_PERMSETS in that PR). The merge-to-main run correctly skips
+package/staging/prod (workflow-only change, src=false) and only re-runs apex-test.
+
+--- (2026-06-29) branch protection + merge DONE; main post-merge run = accepted-red ---
+Branch protection set on main (scan+lwc-test+apex-test required, strict, no force-push/del, conv-resolution).
+PR #1 squash-merged (a2236f8). Post-merge main run RED on apex-test = shared-DevHub 3/3 active-scratch contention
+(airline-booking/frs-platform/andrewsolomon-company hold all slots; a Salesforce org limit, not a code defect — same
+source was green on the PR). Andy chose LET IT RIDE: don't disturb sibling orgs; capacity frees as they expire; next
+real gate is the Phase 6-9 PR. `production` GH Environment already exists (Andy=reviewer). DEVHUB secret stays on
+DevHub 00DgK… (owns the packages) — do NOT repoint to arc-devhub-banking-system (now banking-prod; infeasible anyway).

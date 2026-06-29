@@ -25,18 +25,20 @@ public with sharing class BankAccountController {
         }
 
         String correlationId = String.valueOf(System.now().getTime()) + '-' + bankAccountId;
-        HttpResponse res = CalloutService.httpGet(
+        CalloutResult res = CalloutService.httpGet(
             'Core_Banking/api/accounts/' + EncodingUtil.urlEncode(accts[0].Core_Account_Id__c, 'UTF-8') + '/balance',
             correlationId
         );
 
-        if (res.getStatusCode() != 200) {
+        // Typed result from the framework — fail-soft on anything but success (incl. a tripped
+        // circuit breaker), so the LWC shows "temporarily unavailable" rather than an error page.
+        if (!res.isSuccess) {
             throw new AuraHandledException('Balance temporarily unavailable');
         }
 
         // Untyped deserialize: the core JSON key "currency" is an Apex reserved word and
         // cannot be a typed-class member, so we read the body as a Map.
-        Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+        Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(res.body);
         Object bm = body.get('balance_minor');
 
         BalanceView v = new BalanceView();

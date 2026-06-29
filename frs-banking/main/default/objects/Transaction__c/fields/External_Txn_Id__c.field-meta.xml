@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>External_Txn_Id__c</fullName>
+    <label>External Txn Id</label>
+    <type>Text</type>
+    <length>64</length>
+    <externalId>true</externalId>
+    <unique>true</unique>
+    <required>false</required>
+    <description>Core-banking transaction id. Unique — replaying the same webhook cannot create a duplicate ledger row.</description>
+</CustomField>

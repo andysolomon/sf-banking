@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Core_Transfer_Id__c</fullName>
+    <label>Core Transfer Id</label>
+    <type>Text</type>
+    <length>64</length>
+    <required>false</required>
+    <description>Id returned by the core-banking system on success.</description>
+</CustomField>

@@ -1,100 +1,126 @@
 @isTest
 private class CalloutServiceTest {
-    private static final String TEST_USERNAME = 'core_svc_test@frsbank.invalid';
+    private static final String U = 'core_callout_test@frsbank.invalid';
 
-    // Create a user holding Platform_Core_Consumer. In a package-version build org no
-    // perm set is assigned to anyone, so the framework's own object (Integration_Log__c)
-    // is invisible until a user has this grant — we run the assertions as that user.
     @TestSetup
-    static void makeUser() {
+    static void setup() {
         Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
         User u = new User(
-            ProfileId = p.Id,
-            LastName = 'CoreSvc',
-            Email = 'core_svc_test@frsbank.invalid',
-            Username = TEST_USERNAME,
-            Alias = 'csvc',
-            TimeZoneSidKey = 'America/New_York',
-            LocaleSidKey = 'en_US',
-            EmailEncodingKey = 'UTF-8',
-            LanguageLocaleKey = 'en_US'
+            ProfileId = p.Id, LastName = 'CalloutTest', Email = 'core_callout_test@frsbank.invalid',
+            Username = U, Alias = 'ccal', TimeZoneSidKey = 'America/New_York',
+            LocaleSidKey = 'en_US', EmailEncodingKey = 'UTF-8', LanguageLocaleKey = 'en_US'
         );
         insert u;
         PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Platform_Core_Consumer' LIMIT 1];
         insert new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id);
     }
+    private static User svc() { return [SELECT Id FROM User WHERE Username = :U LIMIT 1]; }
 
-    private static User svcUser() {
-        return [SELECT Id FROM User WHERE Username = :TEST_USERNAME LIMIT 1];
-    }
-
+    // --- mocks ---------------------------------------------------------------------------
     private class OkMock implements HttpCalloutMock {
         public HttpResponse respond(HttpRequest req) {
-            HttpResponse res = new HttpResponse();
-            res.setStatusCode(200);
-            res.setBody('{"balance_minor":250000,"currency":"USD"}');
-            return res;
+            HttpResponse r = new HttpResponse(); r.setStatusCode(200); r.setBody('{"ok":true}'); return r;
         }
     }
-    private class ServerErrorMock implements HttpCalloutMock {
+    private class ErrMock implements HttpCalloutMock {
         public HttpResponse respond(HttpRequest req) {
-            HttpResponse res = new HttpResponse();
-            res.setStatusCode(500);
-            res.setBody('{"error":"core banking unavailable"}');
-            return res;
+            HttpResponse r = new HttpResponse(); r.setStatusCode(500); r.setBody('{"error":"down"}'); return r;
         }
     }
-    private class ThrowingMock implements HttpCalloutMock {
+    private class ThrowMock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) { throw new CalloutException('boom'); }
+    }
+    private class FlakyMock implements HttpCalloutMock {
+        Integer n = 0;
         public HttpResponse respond(HttpRequest req) {
-            throw new CalloutException('simulated timeout');
+            n++; HttpResponse r = new HttpResponse();
+            r.setStatusCode(n == 1 ? 500 : 200); r.setBody('{"n":' + n + '}'); return r;
         }
     }
 
     @isTest
     static void httpGet_success_logsSuccess() {
-        Test.setMock(HttpCalloutMock.class, new OkMock());
-        Test.startTest();
-        System.runAs(svcUser()) {
-            HttpResponse res = CalloutService.httpGet('Core_Banking/api/accounts/abc/balance', 'corr-1');
-            System.assertEquals(200, res.getStatusCode(), 'expected 200 from the mock');
-            Integration_Log__c log = [SELECT Status__c, Direction__c FROM Integration_Log__c
-                                      WHERE Correlation_Id__c = 'corr-1' LIMIT 1];
-            System.assertEquals('Success', log.Status__c);
-            System.assertEquals('Outbound', log.Direction__c);
+        System.runAs(svc()) {
+            Test.setMock(HttpCalloutMock.class, new OkMock());
+            Test.startTest();
+            CalloutResult r = CalloutService.httpGet('Core_Banking/api/accounts/abc/balance', 'c-ok');
+            Test.stopTest();
+            System.assert(r.isSuccess, 'expected success');
+            System.assertEquals(200, r.statusCode);
+            System.assertEquals(1, [SELECT COUNT() FROM Integration_Log__c
+                WHERE Correlation_Id__c = 'c-ok' AND Status__c = 'Success']);
         }
-        Test.stopTest();
     }
 
     @isTest
-    static void httpGet_errorStatus_logsError() {
-        Test.setMock(HttpCalloutMock.class, new ServerErrorMock());
-        Test.startTest();
-        System.runAs(svcUser()) {
-            HttpResponse res = CalloutService.httpGet('Core_Banking/api/accounts/abc/balance', 'corr-2');
-            System.assertEquals(500, res.getStatusCode());
-            Integration_Log__c log = [SELECT Status__c FROM Integration_Log__c
-                                      WHERE Correlation_Id__c = 'corr-2' LIMIT 1];
-            System.assertEquals('Error', log.Status__c, '4xx/5xx must log Error');
+    static void send_errorStatus_isTransient() {
+        System.runAs(svc()) {
+            Test.setMock(HttpCalloutMock.class, new ErrMock());
+            Test.startTest();
+            CalloutResult r = CalloutService.send(
+                new CalloutRequest('GET', 'Core_Banking/api/x').withCorrelation('c-err'));
+            Test.stopTest();
+            System.assert(!r.isSuccess);
+            System.assertEquals(500, r.statusCode);
+            System.assert(r.isTransient(), '5xx must be transient');
         }
-        Test.stopTest();
     }
 
     @isTest
-    static void httpGet_thrown_wrapsAndLogsError() {
-        Test.setMock(HttpCalloutMock.class, new ThrowingMock());
-        Boolean threw = false;
-        Test.startTest();
-        System.runAs(svcUser()) {
-            try {
-                CalloutService.httpGet('Core_Banking/api/accounts/abc/balance', 'corr-3');
-            } catch (CalloutService.CalloutException e) {
-                threw = true;
+    static void send_transportError_isTransient() {
+        System.runAs(svc()) {
+            Test.setMock(HttpCalloutMock.class, new ThrowMock());
+            Test.startTest();
+            CalloutResult r = CalloutService.send(
+                new CalloutRequest('GET', 'Core_Banking/api/x').withCorrelation('c-throw').withCategory(Logger.CALLOUT));
+            Test.stopTest();
+            System.assert(!r.isSuccess);
+            System.assert(r.isTransient(), 'transport error must be transient');
+            System.assertNotEquals(null, r.errorMessage);
+        }
+    }
+
+    @isTest
+    static void circuitBreaker_opensAfterThreshold() {
+        System.runAs(svc()) {
+            List<Integration_Log__c> seed = new List<Integration_Log__c>();
+            for (Integer i = 0; i < 5; i++) {
+                seed.add(new Integration_Log__c(Endpoint_Alias__c = 'Core_Banking/api/x',
+                    Status__c = 'Error', Direction__c = 'Outbound', Category__c = 'Callout',
+                    Correlation_Id__c = 'seed' + i));
             }
-            System.assert(threw, 'a transport failure must surface as CalloutException');
-            Integration_Log__c log = [SELECT Status__c FROM Integration_Log__c
-                                      WHERE Correlation_Id__c = 'corr-3' LIMIT 1];
-            System.assertEquals('Error', log.Status__c);
+            insert seed;
+            Test.setMock(HttpCalloutMock.class, new OkMock()); // would succeed, but breaker must skip it
+            Test.startTest();
+            CalloutResult r = CalloutService.send(
+                new CalloutRequest('GET', 'Core_Banking/api/x').withCorrelation('c-breaker'));
+            Test.stopTest();
+            System.assert(r.circuitOpen, 'breaker should be open after 5 recent errors');
+            System.assert(!r.isSuccess);
         }
-        Test.stopTest();
+    }
+
+    @isTest
+    static void sendWithRetry_exhausts_deadLetters() {
+        System.runAs(svc()) {
+            Test.setMock(HttpCalloutMock.class, new ErrMock());
+            Test.startTest();
+            CalloutService.httpPost('Core_Banking/api/transfers', '{"amt":100}', 'c-retry', 'idem-1', 1);
+            Test.stopTest(); // the single async retry runs, fails again → dead-letter
+            System.assertEquals(1, [SELECT COUNT() FROM Dead_Letter__c WHERE Correlation_Id__c = 'c-retry'],
+                'exhausted retry must dead-letter');
+        }
+    }
+
+    @isTest
+    static void sendWithRetry_succeedsOnRetry_noDeadLetter() {
+        System.runAs(svc()) {
+            Test.setMock(HttpCalloutMock.class, new FlakyMock());
+            Test.startTest();
+            CalloutService.httpPost('Core_Banking/api/transfers', '{"amt":100}', 'c-flaky', 'idem-2', 1);
+            Test.stopTest(); // first 500 → retry → 200 success
+            System.assertEquals(0, [SELECT COUNT() FROM Dead_Letter__c WHERE Correlation_Id__c = 'c-flaky'],
+                'a successful retry must not dead-letter');
+        }
     }
 }
