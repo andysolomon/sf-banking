@@ -92,8 +92,10 @@ jobs:
     container: node:20
     steps:
       - uses: actions/checkout@v4
-      - name: Install sf CLI + code-analyzer
+      - name: Install Java (PMD/CPD engines), sf CLI + code-analyzer
         run: |
+          # node:20 has no JRE; Code Analyzer's pmd/cpd engines need Java 11+.
+          command -v java >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq default-jre-headless; }
           command -v sf >/dev/null 2>&1 || npm install --global @salesforce/cli@${SF_CLI_VERSION}
           sf plugins inspect code-analyzer >/dev/null 2>&1 || sf plugins install code-analyzer
       - name: Code Analyzer (fail on High+)
