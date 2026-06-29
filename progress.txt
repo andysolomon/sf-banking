@@ -223,3 +223,27 @@ CONSTRAINTS (carried from todo-app, still apply):
 - LESSON (interview gold): reusing a SHARED prod org across two platform-style projects collided on a duplicated component
   (CalloutService). Real fix = org-per-product OR a single shared platform package. Plus: free-tier CI minutes are a finite
   shared resource across a namespace — a 16-min package build can exhaust the monthly pool mid-release.
+
+=== LATEST (2026-06-29) — GitHub Actions CI LANDED ON MAIN (PR #1 merged) ===
+PR #1 (feature/ci-github-actions, off main) GREEN end-to-end on a real run: changes -> scan (PMD+CPD, JRE installed)
+-> lwc-test -> apex-test (fresh scratch: deploy both pkgs, assign permsets, 7 tests 100%, 95% org-wide coverage,
+>=85% gate). Squash-merged to main (a2236f8). Branch protection ON main: required checks = scan + lwc-test + apex-test,
+strict (up-to-date), no force-push/deletion, conversation-resolution required, enforce_admins=false (solo break-glass).
+Dev Hub secret SFDX_AUTH_URL_DEVHUB_B64 set (pipe sf->base64->gh, never printed); SFDX_AUTH_URL_PROD_B64 already present
+(VERIFY it points at banking-prod, not prodtest). Co-developed with Andy live: he added bash default shell (dash in
+node:20 has no pipefail), JRE install in scan (PMD/CPD need Java), and a SECOND path filter `src` (excludes
+.github/workflows/**) so RELEASE jobs gate on real source while apex-test (gates on `sf`) still runs on workflow edits.
+I fixed: SF_PERMSETS must match the branch's source (dropped Banking_Integration_User on the v0.1.0 branch — re-add it
+in the Phase 6-9 PR). Freed scratch capacity by deleting 2 EXPIRED sibling orgs (hotel-booking, sfra-dev; Andy-authorized).
+REMAINING before a real release runs clean: (a) create the `production` GitHub Environment + required reviewer (the manual
+prod gate replacing GitLab when:manual); (b) confirm SFDX_AUTH_URL_PROD_B64 -> banking-prod. NEXT: open the Phase 6-9 PR
+-> v0.2.0 (MUST re-add Banking_Integration_User to SF_PERMSETS in that PR). The merge-to-main run correctly skips
+package/staging/prod (workflow-only change, src=false) and only re-runs apex-test.
+
+--- (2026-06-29) branch protection + merge DONE; main post-merge run = accepted-red ---
+Branch protection set on main (scan+lwc-test+apex-test required, strict, no force-push/del, conv-resolution).
+PR #1 squash-merged (a2236f8). Post-merge main run RED on apex-test = shared-DevHub 3/3 active-scratch contention
+(airline-booking/frs-platform/andrewsolomon-company hold all slots; a Salesforce org limit, not a code defect — same
+source was green on the PR). Andy chose LET IT RIDE: don't disturb sibling orgs; capacity frees as they expire; next
+real gate is the Phase 6-9 PR. `production` GH Environment already exists (Andy=reviewer). DEVHUB secret stays on
+DevHub 00DgK… (owns the packages) — do NOT repoint to arc-devhub-banking-system (now banking-prod; infeasible anyway).
