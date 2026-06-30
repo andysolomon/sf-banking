@@ -9,6 +9,18 @@ Weighting: this project deepens the 3 JD areas todo-app left thin -
 Packages: frs-platform-core (base enabler) <- frs-banking (extension, depends on core).
 Integration peer: frs-core-banking-mock (Next.js on Vercel, bidirectional + failure switch).
 
+=== CURRENT STATUS (2026-06-30) ===
+Phases 1-9 BUILT. Released **v0.2.1** (Phases 6-9) to the lab prod org via GitHub Actions.
+Repo MOVED GitLab -> GitHub (github.com/andysolomon/sf-banking, public) after the Fed role
+fell through; project continues as a portfolio/learning piece. CI = GitHub Actions
+(.github/workflows/salesforce.yml): PR gate -> push-to-main release -> manual `production`
+Environment gate. Build/prod org = arc-devhub-banking-system (lab: one org plays devhub + prod).
+Tags: v0.1.0 (walking skeleton), v0.2.1 (Phases 6-9). The GitLab pipeline (ci-templates/ +
+.gitlab-ci.yml) remains as dormant reference.
+REMAINING (Phase 9 execution items, deferred): live integration-failure drill, rollback
+rehearsal, then v1.0.0. CI/release machinery all working.
+(Historical phase log below is retained as the build record.)
+
 [~] 0.0 - Plan confirmed by Andy: chose to START this thread 2026-06-17 (scope/2-pkg/mock accepted).
           Folded in 2 study-derived additions: data-classification.md (Phase 3), daily reconciliation
           job (Phase 7). OPEN interactive call, DEFERRED to Phase 4: reuse todo-app DevHub/"prod" orgs

@@ -1,5 +1,39 @@
 # Changelog — Banking App (project #2)
 
+## [0.2.1] — 2026-06-30 — Phases 6–9 (RELEASED via GitHub Actions)
+
+Package versions: `frs-platform-core` 0.2.1 (04tgK000000E1nRQAS) → `frs-banking` 0.2.1
+(04tgK000000E1p3QAC). Tag `v0.2.1`. First release through the **GitHub Actions** pipeline,
+installed into the lab org `arc-devhub-banking-system` (devhub-as-prod).
+
+### frs-platform-core (the reusable platform — Phase 6)
+- **Logger** + `Integration_Log__c` (Category/Message/Retry_Count) with payload-safe redaction.
+- **CalloutService** matured: typed `CalloutRequest`/`CalloutResult`, `send()`, circuit-breaker,
+  Idempotency-Key, async retry + exponential backoff (`CalloutRetryQueueable`), dead-letter on
+  exhaustion. `httpGet(path, corr)` **kept returning `HttpResponse`** for backward compatibility.
+- **Dead_Letter__c** + `DeadLetterService` (replay) + `DeadLetterReplayBatch` (scope 1).
+- **PlatformEvents** publisher + generic `Integration_Event__e`. Consumer `README.md`.
+
+### frs-banking (integration features — Phase 7)
+- FR-2 Transfer (idempotent, async, dead-letter on failure); FR-3/4 inbound webhooks
+  (`WebhookResource`: auth + replay guard → `Transaction__c` / `Case`); FR-5
+  `Transfer_Completed__e` subscriber → ledger; FR-6 dispute Flow; reconciliation + interest batches.
+- New least-privilege `Banking_Integration_User` permission set.
+
+### Quality, security & ops (Phases 8–9)
+- `SecurityModelTest` (isolation, read-only balance FLS, least-priv integration user); full suite
+  **82 tests, 93% coverage**. RTM test column complete. test-strategy + release/rollback/hotfix +
+  integration-failure runbooks + InfoSec sign-off + DORA metrics.
+
+### Platform / release
+- **Migrated GitLab → GitHub**; pipeline ported to GitHub Actions (`.github/workflows/salesforce.yml`):
+  PR gate (scan/lwc/apex≥85%) → push-to-main release (package → staging-install → prod-install
+  gated on the `production` Environment).
+- **Fixed a 2GP breaking-change** that blocked the in-place upgrade: Phase 6 had changed
+  `CalloutService.httpGet`'s return type; restored it to `HttpResponse` (new code uses `send()`),
+  so the resident v0.1.0 recompiles cleanly on upgrade. *(Lesson: never change a public method's
+  signature in a base package others depend on — add a new method.)*
+
 ## [0.1.0] — 2026-06-23 — Phase 5 walking skeleton (RELEASED to prodtest)
 
 Package versions: `frs-platform-core` 0.1.0.2 (04tgK000000DvlFQAS) → `frs-banking`

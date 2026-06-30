@@ -221,10 +221,63 @@ jobs:
         if: always()
         run: sf org delete scratch --target-org stg-$GITHUB_RUN_ID --no-prompt || true
 
-  prod-install:
+  # In-place UPGRADE test: install the prior RELEASED version (what prod runs), then upgrade to
+  # the new build. staging-install only proves a FRESH install — it cannot catch a breaking
+  # base-package change that fails the resident consumer's recompile (exactly what burned v0.2.0:
+  # CalloutService.httpGet's return type changed, so the resident v0.1.0 BankAccountController
+  # wouldn't compile against the new core). Runs AFTER staging-install (sequential) so banking-app
+  # never holds two scratch slots at once on the shared Dev Hub. First release (no prior released
+  # version) is a no-op pass.
+  upgrade-install:
     runs-on: ubuntu-latest
     container: node:20
     needs: [package, staging-install]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sf CLI + jq
+        run: |
+          command -v sf >/dev/null 2>&1 || npm install --global @salesforce/cli@${SF_CLI_VERSION}
+          command -v jq >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq jq; }
+      - name: Authenticate Dev Hub
+        env:
+          SFDX_AUTH_URL_DEVHUB_B64: ${{ secrets.SFDX_AUTH_URL_DEVHUB_B64 }}
+        run: |
+          echo "$SFDX_AUTH_URL_DEVHUB_B64" | base64 -d > /tmp/devhub-auth.txt
+          sf org login sfdx-url --sfdx-url-file /tmp/devhub-auth.txt --alias devhub --set-default-dev-hub
+          rm -f /tmp/devhub-auth.txt
+      - name: Upgrade test — prior released → new build
+        env:
+          CORE_SPV: ${{ needs.package.outputs.core_spv }}
+          APP_SPV: ${{ needs.package.outputs.app_spv }}
+        run: |
+          set -eo pipefail
+          # 'from' baseline = highest RELEASED version of each package (what prod is on). The new
+          # build is still beta here (promote happens in prod-install), so it is never selected.
+          sel='[.result[]] | sort_by(.MajorVersion,.MinorVersion,.PatchVersion,.BuildNumber) | last | .SubscriberPackageVersionId // empty'
+          FROM_CORE=$(sf package version list --released --packages "$SF_CORE_PACKAGE" --target-dev-hub devhub --json | jq -r "$sel")
+          FROM_APP=$(sf package version list --released --packages "$SF_APP_PACKAGE"  --target-dev-hub devhub --json | jq -r "$sel")
+          if [ -z "$FROM_CORE" ] || [ -z "$FROM_APP" ]; then
+            echo "No prior released version — first release, upgrade test skipped (pass)."
+            exit 0
+          fi
+          echo "Upgrade: FROM core=$FROM_CORE app=$FROM_APP  →  TO core=$CORE_SPV app=$APP_SPV"
+          sf org create scratch --definition-file "$SF_SCRATCH_DEF" --alias upg-$GITHUB_RUN_ID --duration-days 1 --set-default --wait 15
+          # 1) baseline = the resident prod state (prior released, core → app)
+          sf package install --package "$FROM_CORE" --target-org upg-$GITHUB_RUN_ID --wait 20 --no-prompt
+          sf package install --package "$FROM_APP"  --target-org upg-$GITHUB_RUN_ID --wait 20 --no-prompt
+          # 2) in-place upgrade to the new build — this fails on a breaking base-package change
+          sf package install --package "$CORE_SPV" --target-org upg-$GITHUB_RUN_ID --wait 25 --no-prompt
+          sf package install --package "$APP_SPV"  --target-org upg-$GITHUB_RUN_ID --wait 25 --no-prompt
+          for p in $SF_PERMSETS; do sf org assign permset --name "$p" --target-org upg-$GITHUB_RUN_ID; done
+          echo "in-place upgrade OK (prior released → new build)."
+      - name: Delete scratch org
+        if: always()
+        run: sf org delete scratch --target-org upg-$GITHUB_RUN_ID --no-prompt || true
+
+  prod-install:
+    runs-on: ubuntu-latest
+    container: node:20
+    needs: [package, staging-install, upgrade-install]
     environment: production   # manual gate: add a required reviewer to this Environment in repo settings
     steps:
       - uses: actions/checkout@v4
