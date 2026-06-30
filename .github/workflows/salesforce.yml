@@ -158,6 +158,29 @@ jobs:
           name: apex-test-log
           path: apex-test.log
 
+  # Aggregator gate — a SINGLE always-running required status check. Passes when changes/scan/
+  # lwc-test are green AND apex-test is green OR legitimately skipped (docs-only PRs skip it via
+  # the `sf` filter). Make ONLY this job a required check in branch protection: that keeps
+  # apex-test enforced on code PRs while letting docs-only PRs merge — a skipped *required*
+  # check would otherwise block the PR forever (GitHub treats skipped required checks as pending).
+  gate:
+    runs-on: ubuntu-latest
+    needs: [changes, scan, lwc-test, apex-test]
+    if: always()
+    steps:
+      - name: Evaluate gate
+        run: |
+          echo "changes=${{ needs.changes.result }} scan=${{ needs.scan.result }} lwc-test=${{ needs.lwc-test.result }} apex-test=${{ needs.apex-test.result }}"
+          fail=0
+          [ "${{ needs.changes.result }}" = "success" ] || { echo "::error::changes did not succeed"; fail=1; }
+          [ "${{ needs.scan.result }}" = "success" ]     || { echo "::error::scan did not succeed"; fail=1; }
+          [ "${{ needs.lwc-test.result }}" = "success" ] || { echo "::error::lwc-test did not succeed"; fail=1; }
+          case "${{ needs.apex-test.result }}" in
+            success|skipped) ;;
+            *) echo "::error::apex-test result=${{ needs.apex-test.result }} (must be success, or skipped on docs-only)"; fail=1 ;;
+          esac
+          if [ "$fail" = "0" ]; then echo "gate: PASS"; else echo "gate: FAIL"; exit 1; fi
+
   # ---- RELEASE (push to main only, and only when SF source changed) -----------------------
   package:
     runs-on: ubuntu-latest
