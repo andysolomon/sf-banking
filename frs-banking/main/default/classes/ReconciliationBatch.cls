@@ -31,9 +31,10 @@ public with sharing class ReconciliationBatch implements Database.Batchable<SObj
         List<Case> cases = new List<Case>();
         for (Bank_Account__c acct : scope) {
             String corr = 'recon-' + acct.Id;
-            CalloutResult r = CalloutService.httpGet(
-                'Core_Banking/api/accounts/' + EncodingUtil.urlEncode(acct.Core_Account_Id__c, 'UTF-8') + '/balance',
-                corr);
+            CalloutResult r = CalloutService.send(
+                new CalloutRequest('GET',
+                    'Core_Banking/api/accounts/' + EncodingUtil.urlEncode(acct.Core_Account_Id__c, 'UTF-8') + '/balance')
+                    .withCorrelation(corr));
             if (!r.isSuccess) {
                 continue; // core unreachable now — next run retries; not a drift signal
             }

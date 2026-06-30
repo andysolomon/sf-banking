@@ -43,10 +43,10 @@ private class CalloutServiceTest {
         System.runAs(svc()) {
             Test.setMock(HttpCalloutMock.class, new OkMock());
             Test.startTest();
-            CalloutResult r = CalloutService.httpGet('Core_Banking/api/accounts/abc/balance', 'c-ok');
+            // httpGet is the LEGACY HttpResponse method (back-compat); send() is the typed path.
+            HttpResponse r = CalloutService.httpGet('Core_Banking/api/accounts/abc/balance', 'c-ok');
             Test.stopTest();
-            System.assert(r.isSuccess, 'expected success');
-            System.assertEquals(200, r.statusCode);
+            System.assertEquals(200, r.getStatusCode(), 'legacy httpGet returns HttpResponse');
             System.assertEquals(1, [SELECT COUNT() FROM Integration_Log__c
                 WHERE Correlation_Id__c = 'c-ok' AND Status__c = 'Success']);
         }
