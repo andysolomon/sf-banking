@@ -47,6 +47,7 @@ Executed against the **live Vercel mock** failure switch:
    double-post (one `core_transfer_id` per transfer).
 4. Record detect→recover wall-clock here as the integration MTTR.
 
-> **Drill log:** _pending live execution (devhub + live mock); record MTTR + any corrected
-> assumption here. The behaviour is already proven deterministically in
-> `integration-failure-drills.md` (HttpCalloutMock); this live run is the operational proof._
+> **Drill log:** ✅ **executed 2026-07-02** — see `integration-failure-drill-log.md`. Detect
+> (real transport error → dead-letter), fail-fast (breaker open at ≥5 errors), and recover
+> (replay → Resolved, no double-post) all confirmed live against the mock; MTTR ≈ the 5-min
+> breaker window + replay cadence.
