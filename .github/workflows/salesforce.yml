@@ -66,8 +66,8 @@ jobs:
       src: ${{ steps.filter.outputs.src }}   # gate for RELEASE jobs — real package source only (NOT .github/workflows),
                                              # so a workflow-only merge to main never cuts a release
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     container: node:20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Java (PMD/CPD engines), sf CLI + code-analyzer
         run: |
           # node:20 has no JRE; Code Analyzer's pmd/cpd engines need Java 11+.
@@ -106,7 +106,7 @@ jobs:
           set -eo pipefail
           WS=""; for d in $SF_PACKAGE_DIRS; do WS="$WS --workspace $d"; done
           sf code-analyzer run $WS --rule-selector Recommended --severity-threshold 2 --output-file scan-results.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: scan-results
@@ -115,10 +115,10 @@ jobs:
   lwc-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run test:unit
@@ -129,7 +129,7 @@ jobs:
     needs: [changes, scan, lwc-test]
     if: needs.changes.outputs.sf == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install sf CLI
         run: command -v sf >/dev/null 2>&1 || npm install --global @salesforce/cli@${SF_CLI_VERSION}
       - name: Authenticate Dev Hub
@@ -152,7 +152,7 @@ jobs:
       - name: Delete scratch org
         if: always()
         run: sf org delete scratch --target-org ci-$GITHUB_RUN_ID --no-prompt || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: apex-test-log
@@ -191,7 +191,7 @@ jobs:
       core_spv: ${{ steps.build.outputs.core_spv }}
       app_spv: ${{ steps.build.outputs.app_spv }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install sf CLI + jq
         run: |
           command -v sf >/dev/null 2>&1 || npm install --global @salesforce/cli@${SF_CLI_VERSION}
@@ -219,7 +219,7 @@ jobs:
     container: node:20
     needs: [package]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install sf CLI
         run: command -v sf >/dev/null 2>&1 || npm install --global @salesforce/cli@${SF_CLI_VERSION}
       - name: Authenticate Dev Hub
@@ -303,7 +303,7 @@ jobs:
     needs: [package, staging-install, upgrade-install]
     environment: production   # manual gate: add a required reviewer to this Environment in repo settings
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install sf CLI
         run: command -v sf >/dev/null 2>&1 || npm install --global @salesforce/cli@${SF_CLI_VERSION}
       # Promote (→Released) is done against the Dev Hub that OWNS the packages — beta versions
